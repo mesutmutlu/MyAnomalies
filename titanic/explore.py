@@ -22,7 +22,8 @@ categorical_feature_mask = dt.dtypes==object
 categorical_cols = dt.columns[categorical_feature_mask].tolist()
 #print(dt.groupby(['Sex', 'Embarked'])['Survived'].mean())
 #fig = plt.figure()
-dt.groupby(['Age'])['Survived'].size().plot(kind='bar')
+print(dt.groupby(['Age'])['Survived'].agg(['count', 'sum']))
+dt.groupby(['Age'])['Survived'].agg(['count', 'sum']).plot(kind='bar')
 plt.show()
 
 sys.exit()
