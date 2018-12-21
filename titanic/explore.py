@@ -42,6 +42,19 @@ def fill_age_na():
     print(train["Age"].describe())
     return train
 
+def analyze_cabin():
+    train = fill_cabin_na()
+    print(train)
+    train.groupby(['Deck'])['Survived'].agg(['count', 'sum', 'mean']).plot(kind="bar", secondary_y="mean")
+    #train["Deck"].plot(kind="box")
+    # dt["perc"].plot(kind="bar", secondary_y="perc")
+    train.groupby(['Deck'])['Survived'].agg(['mean']).plot(kind="bar")
+
+    train.groupby(['Deck'])['Survived'].agg(['mean']).plot(kind="density")
+    # dt["perc"].replace("inf", "0")
+    #print(train)
+    plt.show()
+
 def fill_cabin_na():
     deck = {"T":0, "A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6, "G": 7, "U": 8}
     train, test, gender_sub = read_data()
@@ -120,4 +133,4 @@ def test():
     #print(arr.shape)
 
 if __name__ == "__main__":
-    fill_age_na()
+    analyze_cabin()
