@@ -8,6 +8,7 @@ import re
 
 
 def read_data():
+
     gender_sub = pd.read_csv("C:/Users/dtmemutlu/PycharmProjects/MyAnomalies/titanic/gender_submission.csv")
     train = pd.read_csv("C:/Users/dtmemutlu/PycharmProjects/MyAnomalies/titanic/train.csv")
     test = pd.read_csv("C:/Users/dtmemutlu/PycharmProjects/MyAnomalies/titanic/test.csv")
@@ -23,13 +24,11 @@ def analyze_age():
 
     train.groupby(['Age'])['Survived'].agg(['mean']).plot(kind="density")
     # dt["perc"].replace("inf", "0")
-    print(dt)
+    #print(dt)
     plt.show()
 
-def fill_age_na():
-
-    train, test, gender_sub = read_data()
-    print(train["Age"].describe())
+def fill_age_na(train):
+    #print(train["Age"].describe())
     mean = round(train["Age"].mean(),2)
     std = round(train["Age"].std(), 2)
     is_null = train["Age"].isnull().sum()
@@ -39,12 +38,12 @@ def fill_age_na():
     train["Age"] = age_slice
 
     #print(mean, std, is_null, rand_age)
-    print(train["Age"].describe())
+    #print(train["Age"].describe())
     return train
 
 def analyze_cabin():
     train = fill_cabin_na()
-    print(train)
+    #print(train)
     train.groupby(['Deck'])['Survived'].agg(['count', 'sum', 'mean']).plot(kind="bar", secondary_y="mean")
     #train["Deck"].plot(kind="box")
     # dt["perc"].plot(kind="bar", secondary_y="perc")
@@ -55,19 +54,59 @@ def analyze_cabin():
     #print(train)
     plt.show()
 
-def fill_cabin_na():
+def fill_cabin_na(train):
     deck = {"T":0, "A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6, "G": 7, "U": 8}
-    train, test, gender_sub = read_data()
     train['Cabin'] = train['Cabin'].fillna("U0")
     train['Deck'] = train['Cabin'].map(lambda x: re.compile("([a-zA-Z]+)").search(x).group(0))
     train['Deck'] = train['Deck'].map(deck)
-    print(train['Deck'].describe())
+    #print(train['Deck'].describe())
 
     return train
     #print(pd.concat([g, h]).drop_duplicates(keep=False))
 
+def analyze_embarked():
+    train = fill_embarked_na()
+    #print(train)
+    train.groupby(['Embarked'])['Survived'].agg(['count', 'sum', 'mean']).plot(kind="bar", secondary_y="mean")
+    #train["Deck"].plot(kind="box")
+    # dt["perc"].plot(kind="bar", secondary_y="perc")
+    train.groupby(['Embarked'])['Survived'].agg(['mean']).plot(kind="bar")
+
+    train.groupby(['Embarked'])['Survived'].agg(['mean']).plot(kind="density")
+    # dt["perc"].replace("inf", "0")
+    #print(train)
+    plt.show()
+
+def fill_embarked_na(train):
+    embarked = {"U": 0, "C": 1, "Q": 2, "S": 3}
+    #print(train['Embarked'].describe())
+    #print(train["Embarked"].unique())
+    train['Embarked'] = train['Embarked'].fillna("U")
+    train['Embarked'] = train['Embarked'].map(embarked)
+    #print(train["Embarked"].unique())
+
+    return train
+
+def fill_sex_na(train):
+    sex = {"male": 0, "female": 1}
+    #print(train['Embarked'].describe())
+    #print(train["Embarked"].unique())
+    train['Sex'] = train['Sex'].map(sex)
+    #print(train["Embarked"].unique())
+
+    return train
+
+def analyze_fare(train):
+    print(train)
+    #fig, axes = plt.subplots(nrows=2, ncols=2)
+    #train[train["Survived"] == 1].Fare.plot(kind="hist", ax=axes[0,0])
+    #train[train["Survived"] == 0].Fare.plot(kind="hist", ax=axes[1,0])
+    train.boxplot(column="Fare",by='Survived')
+    plt.show()
+
 
 def test():
+
     train, test, gender_sub = read_data()
 
     pd.set_option('display.max_columns', 500)
@@ -92,7 +131,6 @@ def test():
     #dt["Fare"][dt["Survived"]==1].plot(kind="bar")
     plt.show()
 
-    sys.exit()
 
     fig, axes = plt.subplots(nrows=4, ncols=4)
 
@@ -132,5 +170,38 @@ def test():
     #arr=["paris", "paris", "tokyo", "amsterdam"]
     #print(arr.shape)
 
+def prepare():
+    train_copy, test, gender_sub = read_data()
+    train = train_copy
+    train = fill_embarked_na(train)
+    train = fill_cabin_na(train)
+    train = fill_age_na(train)
+    train = fill_sex_na(train)
+    train.drop(["Name", "Ticket", "Cabin","PassengerId"], axis=1, inplace=True)
+    train_x = train.drop("Survived", axis=1)
+    train_y = train["Survived"]
+    test = fill_embarked_na(test)
+    test = fill_cabin_na(test)
+    test = fill_age_na(test)
+    test = fill_sex_na(test)
+    test.drop(["Name", "Ticket", "Cabin","PassengerId"], axis=1, inplace=True)
+
+
+    return train_x, train_y, test, gender_sub
+
+
 if __name__ == "__main__":
-    analyze_cabin()
+
+    train_copy, test, gender_sub = read_data()
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
+    print(train_copy.describe(include="all"))
+    train = train_copy
+    train = fill_embarked_na(train)
+    train = fill_cabin_na(train)
+    train = fill_age_na(train)
+    train = fill_sex_na(train)
+    train.drop(["Name", "Ticket", "Cabin"], axis=1, inplace=True)
+    #print(train.describe(include="all"))
+
+    #analyze_fare(train.loc[:,["Survived","Fare"]])
