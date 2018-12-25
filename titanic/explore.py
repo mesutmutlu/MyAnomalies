@@ -18,11 +18,19 @@ def analyze_age():
     train, test, gender_sub = read_data()
     dt = train.groupby(['Age'])['Survived'].agg(['count', 'sum'])
     dt["perc"] = dt["sum"] / dt["count"]
-    train["Age"].plot(kind="box")
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+    #train["Age"].plot(kind="box")
     # dt["perc"].plot(kind="bar", secondary_y="perc")
-    train.groupby(['Age'])['Survived'].agg(['mean']).plot(kind="bar")
+    #train.groupby(['Age'])['Survived'].agg(['mean']).plot(kind="bar")
 
-    train.groupby(['Age'])['Survived'].agg(['mean']).plot(kind="density")
+    #train.groupby(['Age'])['Survived'].agg(['mean']).plot(kind="density")
+    #train[(train["Age"].isnull()) & (train["Survived"] == 1)]["Fare"].hist(ax=axes[0,0])
+    #print(train[(train["Age"].isnull()) & (train["Survived"] == 1)]["Age"])
+    #train[(train["Age"].isnull()) & (train["Survived"] == 0)]["Fare"].hist(ax=axes[1,0])
+    train[(train["Age"].notnull()) & (train["Survived"] == 1)]["Fare"].hist(ax=axes[0,1])
+    train[(train["Age"].notnull()) & (train["Survived"] == 0)]["Fare"].hist(ax=axes[1,1])
+    train[(train["Age"].isnull())]["Survived"].agg(["mean"]).plot(kind="bar",ax=axes[0,0])
+    train[(train["Age"].notnull())]["Survived"].agg(["mean"]).plot(kind="bar",ax=axes[1,0])
     # dt["perc"].replace("inf", "0")
     #print(dt)
     plt.show()
@@ -177,7 +185,10 @@ def prepare():
     train = fill_cabin_na(train)
     train = fill_age_na(train)
     train = fill_sex_na(train)
-    train.drop(["Name", "Ticket", "Cabin","PassengerId"], axis=1, inplace=True)
+    train["Family"] = train["SibSp"] + train["Parch"]
+    train['Age*Class'] = train['Age'] * train['Pclass']
+    train['Fare_Per_Person'] = train['Fare'] / (train['Family'] + 1)
+    train.drop(["Name", "Ticket", "Cabin","PassengerId","SibSp","Parch"], axis=1, inplace=True)
     train_x = train.drop("Survived", axis=1)
     train_y = train["Survived"]
     test = fill_embarked_na(test)
@@ -191,7 +202,8 @@ def prepare():
 
 
 if __name__ == "__main__":
-
+    analyze_age()
+    sys.exit()
     train_copy, test, gender_sub = read_data()
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
