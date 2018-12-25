@@ -50,6 +50,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from time import time
 from numpy.random import uniform as np_uniform
+from numpy.random import random_integers #integers
+from numpy.random import random_sample #floats
 
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
