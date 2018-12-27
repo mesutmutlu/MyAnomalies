@@ -41,8 +41,10 @@ def fill_age_na(train):
     std = round(train["Age"].std(), 2)
     is_null = train["Age"].isnull().sum()
     rand_age = np.random.randint(mean - 2*std, mean + 2*std, size=is_null)
+    #print(rand_age)
     age_slice = train["Age"].copy()
     age_slice[np.isnan(age_slice)]=rand_age
+    #print(age_slice)
     train["Age"] = age_slice
 
     #print(mean, std, is_null, rand_age)

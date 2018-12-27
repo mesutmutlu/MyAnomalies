@@ -45,24 +45,27 @@ from sklearn.decomposition import PCA
 from skopt import gp_minimize
 from skopt import WeightedBayesSearchCV
 from skopt.space import Real, Categorical, Integer
-from scipy.stats import randint as sp_randint
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from time import time
-from numpy.random import uniform as np_uniform
 from numpy.random import random_integers #integers
 from numpy.random import random_sample #floats
+import pandas as pd
+import scipy as sp
 
-def report(results, n_top=3):
+def report(df, alg, perf, est, results, n_top=3):
     for i in range(1, n_top + 1):
         candidates = np.flatnonzero(results['rank_test_score'] == i)
         for candidate in candidates:
-            print("Model with rank: {0}".format(i))
-            print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
-                  results['mean_test_score'][candidate],
-                  results['std_test_score'][candidate]))
-            print("Parameters: {0}".format(results['params'][candidate]))
-            print("")
+            #print("Model with rank: {0}".format(i))
+            #print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
+            #      results['mean_test_score'][candidate],
+            #      results['std_test_score'][candidate]))
+            #print("Parameters: {0}".format(results['params'][candidate]))
+            #print("")
+            df.loc[len(df)] = [alg, perf, est, format(i), results['mean_test_score'][candidate],results['std_test_score'][candidate],results['params'][candidate]]
+    return df
+
 
 def f(x):
     return (np.sin(5 * x[0]) * (1 - np.tanh(x[0] ** 2)) *
@@ -79,80 +82,139 @@ def test_bayes(X_train, y_train):
 
 def iterate_by_randomsearch(train_x, train_y):
     classifiers = [
-        (AdaBoostClassifier(), {"n_estimators": sp_randint(25, 100)}),
-        # BaggingClassifier(n_estimators=50),
-        # ExtraTreesClassifier(n_estimators=50),
-        # GradientBoostingClassifier(n_estimators=50),
-        # IsolationForest(n_estimators=50, contamination=0.005, behaviour='new' ),
-        (RandomForestClassifier(), {"n_estimators": sp_randint(25, 100),
+        (AdaBoostClassifier(), {"n_estimators": sp.stats.randint(25, 100)}),
+        (BaggingClassifier(),{"n_estimators": sp.stats.randint(25, 100),
+                                             "max_features": sp.stats.randint(1, 7),
+                                             "bootstrap": [True, False],
+                                             "bootstrap_features": [True, False],
+                                                }),
+        (ExtraTreesClassifier(), {"n_estimators": sp.stats.randint(25, 100),
                                     "max_depth": [3, None],
-                                    "max_features": sp_randint(1, 6),
-                                    "min_samples_split": sp_randint(2, 11),
+                                    "max_features": sp.stats.randint(1, 7),
+                                    "min_samples_split": sp.stats.randint(2, 11),
                                     "bootstrap": [True, False],
-                                    "criterion": ["gini", "entropy"]})]
-
+                                    "criterion": ["gini", "entropy"]}),
+        (GradientBoostingClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                       "loss": ["deviance", "exponential"],
+                                       "max_features": sp.stats.randint(1, 7),
+                                       "min_samples_split": sp.stats.randint(2, 11),
+                                       "criterion": ["friedman_mse", "mse", "mae"],
+                                       "max_depth": [3, None]}),
+        #thsis is for anomaly detection (IsolationForest(),{"n_estimators":50,
+        #                     "contamination":np_uniform(0., 0.5),
+        #                     "behaviour":["old", "new"],
+        #                     "bootstrap": [True, False],
+        #                     "max_features": sp.stats.randint(1, 7),
+        #                     "min_samples_split": sp.stats.randint(2, 11)}),
+        (RandomForestClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                    "max_depth": [3, None],
+                                    "max_features": sp.stats.randint(1, 7),
+                                    "min_samples_split": sp.stats.randint(2, 11),
+                                    "bootstrap": [True, False],
+                                    "criterion": ["gini", "entropy"]}),
+        (GaussianProcessClassifier(), {"tol": sp.stats.uniform(0.0001, 0.05)}),
+        (LogisticRegression(), { "max_iter":sp.stats.randint(0,100),
+                               "solver":["lbfgs", "sag", "saga"]}),
+        (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
+                                         "tol": sp.stats.uniform(0.0001, 0.05)})
+    ]
+    df = pd.DataFrame(columns=['alg', 'perf', 'est','rank','mean','std', 'parameters'])
     for clf in classifiers:
-
+        #print(clf)
+        n_iter=10
         random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
-                                           n_iter=20, cv=5)
+                                           n_iter=n_iter, cv=5)
         start = time()
         random_search.fit(train_x, train_y)
-        print("RandomizedSearchCV took %.2f seconds for %d candidates"
-              " parameter settings." % ((time() - start), 20))
-        report(random_search.cv_results_)
+        #print("%s RandomizedSearchCV took %.2f seconds for %d candidates"
+        #      " parameter settings." % (type(clf[0]).__name__,(time() - start), n_iter))
+
+        df = report(df, type(clf[0]).__name__, time() - start, n_iter, random_search.cv_results_)
+        print(df)
 
 def iterate_by_gridsearch(train_x, train_y):
+    estimators = random_integers(25, 100, size=5)
+    print(estimators)
+    max_features = random_integers(1, 7, size=6)
+    min_samples_split = random_integers(2, 11, size=5)
+    subsample = random_sample((5,))
     classifiers = [
-        (AdaBoostClassifier(), {"n_estimators": sp_randint(25, 100)}),
+        (AdaBoostClassifier(), {"n_estimators": estimators}),
         # BaggingClassifier(n_estimators=50),
         # ExtraTreesClassifier(n_estimators=50),
-        # GradientBoostingClassifier(n_estimators=50),
+        (GradientBoostingClassifier(), {"n_estimators": estimators,
+                                        "loss": ["deviance", "exponential"],
+                                        "max_features": max_features,
+                                        "min_samples_split": min_samples_split,
+                                        "criterion": ["friedman_mse", "mse", "mae"],
+                                        "max_depth": [3, None]}),
         # IsolationForest(n_estimators=50, contamination=0.005, behaviour='new' ),
-        (RandomForestClassifier(), {"n_estimators": sp_randint(25, 100),
+        (RandomForestClassifier(), {"n_estimators": estimators,
                                     "max_depth": [3, None],
-                                    "max_features": sp_randint(1, 6),
-                                    "min_samples_split": sp_randint(2, 11),
+                                    "max_features": max_features,
+                                    "min_samples_split": min_samples_split,
                                     "bootstrap": [True, False],
                                     "criterion": ["gini", "entropy"]})]
 
     for clf in classifiers:
-
+        print("----------", time(), clf[0], "-----------")
         random_search = GridSearchCV(clf[0], param_grid=clf[1], cv=5)
         start = time()
         random_search.fit(train_x, train_y)
-        print("RandomizedSearchCV took %.2f seconds for %d candidates"
+        print("GridSearchCV took %.2f seconds for %d candidates"
               " parameter settings." % ((time() - start), 20))
         report(random_search.cv_results_)
 
+def PassiveAggressiveClassifier_test(train_x, train_y):
+    estimators = random_integers(25, 100, size=5)
+    print(estimators)
+    max_features = random_integers(1, 7, size=6)
+    min_samples_split = random_integers(2, 11, size=5)
+    subsample = random_sample((5,))
+    params = {"max_iter": sp.stats.randint(0, 1230),
+            "tol": sp.stats.uniform(0.001, 0.5)}
+
+    random_search = RandomizedSearchCV(PassiveAggressiveClassifier(), param_distributions=params, cv=10, n_iter=5)
+    start = time()
+    random_search.fit(train_x, train_y)
+    print("GridSearchCV took %.2f seconds for %d candidates"
+          " parameter settings." % ((time() - start), 20))
+    report(random_search.cv_results_)
+
+def gradient_test(train_x, train_y):
+    estimators = random_integers(25, 100, size=5)
+    print(estimators)
+    max_features = random_integers(1, 7, size=6)
+    min_samples_split = random_integers(2, 11, size=5)
+    subsample = random_sample((5,))
+    params = {"n_estimators": sp.stats.randint(25, 100),
+                                       "loss": ["deviance", "exponential"],
+                                       "max_features": sp.stats.randint(1, 7),
+                                       "min_samples_split": sp.stats.randint(2, 11),
+                                       "criterion": ["friedman_mse", "mse", "mae"],
+                                       "max_depth": [3, None]}
+
+    random_search = RandomizedSearchCV(GradientBoostingClassifier(), param_distributions=params, cv=10, n_iter=5)
+    start = time()
+    random_search.fit(train_x, train_y)
+    print("GridSearchCV took %.2f seconds for %d candidates"
+          " parameter settings." % ((time() - start), 20))
+    report(random_search.cv_results_)
 
 
 def iterate_clf(train_x, train_y):
-
     classifiers = [
-        (AdaBoostClassifier(),{"n_estimators":sp_randint(25,100),
-                               "max_depth": [3, None]}),
+        #AdaBoostClassifier(n_estimators=100),
         # BaggingClassifier(n_estimators=50),
         # ExtraTreesClassifier(n_estimators=50),
-        GradientBoostingClassifier(),{"n_estimators":sp_randint(25,100),
-                                      "loss":["deviance", "exponential"],
-                                      "subsample": np_uniform(0.3, 1),
-                                      "max_features": sp_randint(1, 6),
-                                      "min_samples_split": sp_randint(2, 11),
-                                      "bootstrap": [True, False],
-                                      "criterion": ["friedman_mse", "mse", "mae"],
-                                      "max_depth": [3, None]},
+        #GradientBoostingClassifier(n_estimators=100),
         # IsolationForest(n_estimators=50, contamination=0.005, behaviour='new' ),
-        (RandomForestClassifier(),{"n_estimators":sp_randint(25,100),
-                                    "max_depth": [3, None],
-                                    "max_features": sp_randint(1, 6),
-                                    "min_samples_split": sp_randint(2, 11),
-                                    "bootstrap": [True, False],
-                                    "criterion": ["gini", "entropy"]}),
+        #RandomForestClassifier(n_estimators=100),
         # #VotingClassifier(estimators=[('lr', clf1), ('rf', clf2), ('gnb', clf3)], voting='hard'),
         # GaussianProcessClassifier(),
         # LogisticRegression(solver='liblinear'),
         # LogisticRegressionCV(solver='liblinear',cv=5),
-        # PassiveAggressiveClassifier(max_iter=1000 , tol= 0.001),
+        #PassiveAggressiveClassifier(max_iter=1000 , tol= 0.001),
         # RidgeClassifier(max_iter=1000 , tol= 0.001),
         # RidgeClassifierCV(cv=5),
         # SGDClassifier(max_iter=1000 , tol= 0.001),
@@ -180,9 +242,12 @@ def iterate_clf(train_x, train_y):
 
 
 if __name__ == "__main__":
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
 
     train_x, train_y, test, gender_sub = prepare()
-    iterate_by_gridsearch(train_x, train_y)
+    #print(sp.stats.randint(1, 6).value)
+    iterate_by_randomsearch(train_x, train_y)
     #test_bayes(train_x, train_y)
     sys.exit()
     train_x.drop(["Fare","Age","Pclass"], axis=1, inplace=True)
