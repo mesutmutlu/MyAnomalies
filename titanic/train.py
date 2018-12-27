@@ -27,6 +27,8 @@ from sklearn.linear_model import RidgeClassifierCV
 from sklearn.linear_model import SGDClassifier
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import ComplementNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import RadiusNeighborsClassifier
 from sklearn.neighbors import NearestCentroid
@@ -52,6 +54,7 @@ from numpy.random import random_integers #integers
 from numpy.random import random_sample #floats
 import pandas as pd
 import scipy as sp
+import random
 
 def report(df, alg, perf, est, results, n_top=3):
     for i in range(1, n_top + 1):
@@ -82,6 +85,16 @@ def test_bayes(X_train, y_train):
 
 def iterate_by_randomsearch(train_x, train_y):
     classifiers = [
+        # thsis is for anomaly detection (IsolationForest(),{"n_estimators":50,
+        #                     "contamination":np_uniform(0., 0.5),
+        #                     "behaviour":["old", "new"],
+        #                     "bootstrap": [True, False],
+        #                     "max_features": sp.stats.randint(1, 7),
+        #                     "min_samples_split": sp.stats.randint(2, 11)}),
+        # this is for outlier detection (RadiusNeighborsClassifier(), {"radius": sp.stats.uniform(0.5, 5),
+        #                                "algorithm": ["ball_tree", "kd_tree", "brute"],
+        #                                "leaf_size": sp.stats.randint(20, 100),
+        #                                "p": [1, 2]})
         (AdaBoostClassifier(), {"n_estimators": sp.stats.randint(25, 100)}),
         (BaggingClassifier(),{"n_estimators": sp.stats.randint(25, 100),
                                              "max_features": sp.stats.randint(1, 7),
@@ -100,12 +113,6 @@ def iterate_by_randomsearch(train_x, train_y):
                                        "min_samples_split": sp.stats.randint(2, 11),
                                        "criterion": ["friedman_mse", "mse", "mae"],
                                        "max_depth": [3, None]}),
-        #thsis is for anomaly detection (IsolationForest(),{"n_estimators":50,
-        #                     "contamination":np_uniform(0., 0.5),
-        #                     "behaviour":["old", "new"],
-        #                     "bootstrap": [True, False],
-        #                     "max_features": sp.stats.randint(1, 7),
-        #                     "min_samples_split": sp.stats.randint(2, 11)}),
         (RandomForestClassifier(), {"n_estimators": sp.stats.randint(25, 100),
                                     "max_depth": [3, None],
                                     "max_features": sp.stats.randint(1, 7),
@@ -116,11 +123,56 @@ def iterate_by_randomsearch(train_x, train_y):
         (LogisticRegression(), { "max_iter":sp.stats.randint(0,100),
                                "solver":["lbfgs", "sag", "saga"]}),
         (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
-                                         "tol": sp.stats.uniform(0.0001, 0.05)})
+                                         "tol": sp.stats.uniform(0.0001, 0.05)}),
+        (RidgeClassifier(), {"max_iter":sp.stats.randint(0, 2000),
+                             "tol": sp.stats.uniform(0.0001, 0.05),
+                             "solver":["svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga"]}),
+        (SGDClassifier(), {"max_iter":sp.stats.randint(0, 2000),
+                              "tol": sp.stats.uniform(0.0001, 0.05),
+                           "loss":["hinge", "log", "modified_huber", "squared_hinge", "perceptron"],
+                            "penalty":["none", "l2", "l1", "elasticnet"]}),
+        (BernoulliNB(), {}),
+        (MultinomialNB(), {}),
+        (GaussianNB(), {}),
+        (ComplementNB(), {}),
+        (KNeighborsClassifier(), {"n_neighbors":sp.stats.randint(1, 50),
+                                  "algorithm":["ball_tree", "kd_tree", "brute"],
+                                  "leaf_size":sp.stats.randint(20,100),
+                                  "p":[1,2]}),
+        (NearestCentroid(),{}),
+        (MLPClassifier(), {"hidden_layer_sizes":(random.randint(10,1000),),
+                          "activation":["identity", "logistic", "tanh", "relu"],
+                          "solver": ["lbfgs", "sgd", "adam"],
+                           "alpha":sp.stats.uniform(0.00001, 0.001),
+                           "learning_rate":["constant", "invscaling", "adaptive"],
+                           "max_iter": sp.stats.randint(0, 2000),
+                           "tol": sp.stats.uniform(0.0001, 0.05)}),
+        (DecisionTreeClassifier(), {          "max_depth": [3, None],
+                                              "max_features": sp.stats.randint(1, 7),
+                                              "min_samples_split": sp.stats.randint(2, 11),
+                                              "criterion": ["gini", "entropy"]}),
+        (LinearSVC(), {"penalty":["l2"],
+                       "tol":sp.stats.uniform(1e-5, 1e-3),
+                       "C":sp.stats.uniform(0.1, 5),
+                       "max_iter":sp.stats.randint(0, 2000)}),
+        (NuSVC(),{"gamma":sp.stats.uniform(1e-4, 1e-2),
+                  "kernel":["linear", "poly", "rbf", "sigmoid"],
+                  "tol":sp.stats.uniform(1e-4, 1e-2),
+                  }),
+        (SVC(), {"gamma":sp.stats.uniform(1e-4, 1e-2),
+                          "kernel":["linear", "poly", "rbf", "sigmoid"],
+                          "tol":sp.stats.uniform(1e-4, 1e-2),}),
+        (LinearDiscriminantAnalysis(),{"solver":["svd","lsqr", "eigen"],
+                                          "n_components":random.randint(2,4),
+                                           "tol":sp.stats.uniform(1e-5, 1e-2)
+        }),
+        (QuadraticDiscriminantAnalysis(), {"tol":sp.stats.uniform(1e-5, 1e-2)})
+
+
     ]
     df = pd.DataFrame(columns=['alg', 'perf', 'est','rank','mean','std', 'parameters'])
     for clf in classifiers:
-        #print(clf)
+        print(type(clf[0]).__name__, "started at", datetime.now())
         n_iter=10
         random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
                                            n_iter=n_iter, cv=5)
@@ -130,7 +182,7 @@ def iterate_by_randomsearch(train_x, train_y):
         #      " parameter settings." % (type(clf[0]).__name__,(time() - start), n_iter))
 
         df = report(df, type(clf[0]).__name__, time() - start, n_iter, random_search.cv_results_)
-        print(df)
+    print(df)
 
 def iterate_by_gridsearch(train_x, train_y):
     estimators = random_integers(25, 100, size=5)
@@ -220,12 +272,13 @@ def iterate_clf(train_x, train_y):
         # SGDClassifier(max_iter=1000 , tol= 0.001),
         # BernoulliNB(),
         # MultinomialNB(),
+        # GaussianNB(),
+        # ComplementNB(),
         # KNeighborsClassifier(),
         # #RadiusNeighborsClassifier(),
         # NearestCentroid(),
         # MLPClassifier(max_iter=1000),
         # DecisionTreeClassifier(),
-        # ExtraTreeClassifier(),
         # LinearSVC(),
         # NuSVC(gamma=0.001),
         # SVC(gamma=0.001),
@@ -243,7 +296,7 @@ def iterate_clf(train_x, train_y):
 
 if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
-    pd.set_option('display.width', 1000)
+    pd.set_option('display.width', 1500)
 
     train_x, train_y, test, gender_sub = prepare()
     #print(sp.stats.randint(1, 6).value)
