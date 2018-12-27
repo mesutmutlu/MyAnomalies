@@ -112,7 +112,7 @@ def iterate_by_randomsearch(train_x, train_y):
                                     "min_samples_split": sp.stats.randint(2, 11),
                                     "bootstrap": [True, False],
                                     "criterion": ["gini", "entropy"]}),
-        (GaussianProcessClassifier(), {"tol": sp.stats.uniform(0.0001, 0.05)}),
+        (GaussianProcessClassifier(), {}),
         (LogisticRegression(), { "max_iter":sp.stats.randint(0,100),
                                "solver":["lbfgs", "sag", "saga"]}),
         (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
