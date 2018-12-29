@@ -22,7 +22,7 @@ if __name__ == "__main__":
     #print(train.info())
    # print(train[train.Name.isnull()])
     #sns.countplot(x=train.Vaccinated , hue=train.AdoptionSpeed)
-    sns.catplot(x="AdoptionSpeed", col="Type", data=train, kind="count", hue="Gender")
+    sns.catplot(x="Type", col="AdoptionSpeed", data=train, kind="count", hue="Gender")
     #sns.pairplot(train[["AdoptionSpeed", "Gender", "Type"]], hue="Type")
     #g.despine(left=True)
     #g.set_ylabels("adoption per sex")
