@@ -9,7 +9,9 @@ from scipy.stats import entropy
 import numpy as np
 from collections import Counter
 import math
-from petfinder.explore import read_data
+from petfinder.preprocessing import prepare_data
+from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp
+import datetime
 
 def cramers_v(x, y):
     confusion_matrix = pd.crosstab(x,y)
@@ -23,6 +25,7 @@ def cramers_v(x, y):
     return np.sqrt(phi2corr/min((kcorr-1),(rcorr-1)))
 
 def conditional_entropy(x,y):
+    #for categorical vs numerical correlation
     # entropy of x given y
     y_counter = Counter(y)
     xy_counter = Counter(list(zip(x,y)))
@@ -34,7 +37,9 @@ def conditional_entropy(x,y):
         entropy += p_xy * math.log(p_y/p_xy)
     return entropy
 
+
 def theils_u(x, y):
+    #for categorical correlation
     s_xy = conditional_entropy(x,y)
     x_counter = Counter(x)
     total_occurrences = sum(x_counter.values())
@@ -45,11 +50,44 @@ def theils_u(x, y):
     else:
         return (s_x - s_xy) / s_x
 
+
 def by_theilsu(train,indep_cols, dep_cols):
+    # for categorical correlation
     theilu = pd.DataFrame(index=dep_cols, columns=train[indep_cols].columns)
     columns = train[indep_cols].columns
     for j in range(0, len(columns)):
         u = theils_u(train[dep_cols[0]].tolist(), train[columns[j]].tolist())
+        theilu.loc[:, columns[j]] = u
+    theilu.fillna(value=np.nan, inplace=True)
+    plt.figure(figsize=(20, 1))
+    sns.heatmap(theilu, annot=True, fmt='.2f')
+    plt.show()
+
+def correlation_ratio(categories, measurements):
+    # for mix correlation
+    fcat, _ = pd.factorize(categories)
+    cat_num = np.max(fcat)+1
+    y_avg_array = np.zeros(cat_num)
+    n_array = np.zeros(cat_num)
+    for i in range(0,cat_num):
+        cat_measures = measurements[np.argwhere(fcat == i).flatten()]
+        n_array[i] = len(cat_measures)
+        y_avg_array[i] = np.average(cat_measures)
+    y_total_avg = np.sum(np.multiply(y_avg_array,n_array))/np.sum(n_array)
+    numerator = np.sum(np.multiply(n_array,np.power(np.subtract(y_avg_array,y_total_avg),2)))
+    denominator = np.sum(np.power(np.subtract(measurements,y_total_avg),2))
+    if numerator == 0:
+        eta = 0.0
+    else:
+        eta = numerator/denominator
+    return eta
+
+def by_correlation_ratio(train, cat_cols, num_cols):
+    # for mix correlation
+    theilu = pd.DataFrame(index=cat_cols, columns=train[num_cols].columns)
+    columns = train[num_cols].columns
+    for j in range(0, len(columns)):
+        u = correlation_ratio(train[cat_cols[0]].tolist(), train[columns[j]].tolist())
         theilu.loc[:, columns[j]] = u
     theilu.fillna(value=np.nan, inplace=True)
     plt.figure(figsize=(20, 1))
@@ -134,29 +172,80 @@ def by_sschi(indep,dep):
 
     return res
 
+def by_paired_ttest(arr):
+
+    for c in arr.columns.values:
+        i = 0
+        for i in range(0, len(arr.columns.values)):
+            #stats = ttest_rel(arr[c], arr[i])
+            print(c, arr[i].name)
+
+def check_samples_diff(df, dep_col):
+    res = pd.DataFrame(columns=["Column", "Value1", "Value2", "P-Value", "Difference?"])
+    i = 0
+    for c1 in df.columns.values:
+        print(c1, datetime.datetime.now())
+        #stats = ttest_rel(arr[c1], arr[c2])
+        values = df[c1].unique()
+        import itertools
+        combinations = list(itertools.combinations(values, 2))
+
+        for comb in combinations:
+            ds1 = df[df[c1] == comb[0]][dep_col]
+            ds2 = df[df[c1] == comb[1]][dep_col]
+            ds1_p = 0
+            ds2_p = 0
+            if len(ds1) > 8 & len(ds2) > 8:
+                ds1_p = normaltest(ds1)[1]
+                ds2_p = normaltest(ds2)[1]
+
+            #print(type(args[0]))
+            if (ds1_p > 5e-2) & (ds2_p > 5e-2):
+                #come from normal distribution so apply 2 samples student t-test
+                print(c1, comb[0], "normal distribution")
+                p_value = ttest_ind(ds1, ds2)[0]
+            else:
+                # come from non normal distribution so apply 2 samples Kolmogorov-Smirnov statistic
+                p_value = ks_2samp(ds1, ds2)[0]
+
+            if p_value < 5e-2:
+                res.loc[i] = [c1, comb[0], comb[1],p_value , p_value < 5e-2 ]
+                i = i + 1
+    return res
+
 if __name__=="__main__":
 
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    train, test = read_data()
+    x_train, y_train, x_test, test_id = prepare_data()
 
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3", "MaturitySize",
-                           "FurLength",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "Quantity", "State"]
-    ind_cat_conv_columns = ["RescuerID"]
-    ind_text_columns = ["Name", "Description"]
+                           "FurLength", "DescScore", "DescMagnitude",
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "Quantity", "State", "RescuerID"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
 
-    corr_y = train[dep_columns]
-    corr_x = train[ind_num_cat_columns]
+    corr_y_cont = x_train[ind_cont_columns]
+    corr_y_cat = x_train[ind_num_cat_columns]
 
-    res = by_skchi(corr_x, corr_y)
-    print(res)
+    print(check_samples_diff(pd.concat([x_train,y_train], axis=1, sort=False).drop(["RescuerID"], axis=1),dep_columns[0]))
 
-    res = by_sschi(corr_x, corr_y)
-    print(res)
+    # res = by_skchi(corr_x, corr_y)
+    # print(res)
+    #
+    # res = by_sschi(corr_x, corr_y)
+    # print(res)
+    #print(pd.concat([corr_y_cat, y_train], axis=1, sort=False))
+    #by_theilsu(pd.concat([corr_y_cat, y_train], axis=1, sort=False), ind_num_cat_columns, dep_columns)
+    #by_correlation_ratio(pd.concat([corr_y_cont, y_train], axis=1, sort=False), ind_num_cat_columns, dep_columns)
+    #f, ax = plt.subplots(figsize=(10, 8))
+    #corr = pd.concat([x_train, y_train], axis=1, sort=False).corr()
+#    corr.style.background_gradient()
+    #print(corr)
+    # sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool), cmap=sns.diverging_palette(220, 10, as_cmap=True),
+    #             square=True, ax=ax)
 
-    by_theilsu(train, ind_num_cat_columns, dep_columns)
+    # sns.pairplot(pd.concat([x_train, y_train], axis=1, sort=False),hue="AdoptionSpeed", diag_kind ="hist")
+    # plt.show()

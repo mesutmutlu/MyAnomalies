@@ -11,7 +11,7 @@ from datetime import datetime
 import sys
 
 from sklearn.base import BaseEstimator
-from petfinder.explore import prepare_data
+from petfinder.preprocessing import prepare_data
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import ExtraTreesClassifier

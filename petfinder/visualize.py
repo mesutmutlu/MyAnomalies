@@ -9,7 +9,8 @@ from scipy.stats import entropy
 import numpy as np
 from collections import Counter
 import math
-from petfinder.explore import read_data
+from petfinder.getdata import read_data
+from scipy.stats import ttest_rel
 
 
 def check_percentages(arr, indep_cols, dep_col):
