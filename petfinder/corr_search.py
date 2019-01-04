@@ -12,6 +12,8 @@ import math
 from petfinder.preprocessing import prepare_data
 from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp
 import datetime
+from petfinder.preprocessing import Columns
+from petfinder.getdata import read_data
 
 def cramers_v(x, y):
     confusion_matrix = pd.crosstab(x,y)
@@ -213,12 +215,53 @@ def check_samples_diff(df, dep_col):
                 i = i + 1
     return res
 
+#check adoption speed distributions over categorical variables
+def check_samples_diff2(df, dep_col):
+    res = pd.DataFrame(columns=["Column", "Value1", "Value2", "P-Value", "Difference?"])
+    i = 0
+    for c1 in df.columns.values:
+        print(c1, datetime.datetime.now())
+        #stats = ttest_rel(arr[c1], arr[c2])
+        values = df[c1].unique()
+        import itertools
+        combinations = list(itertools.combinations(values, 2))
+
+        for comb in combinations:
+            ds1 = df[df[c1] == comb[0]][dep_col]
+            ds2 = df[df[c1] == comb[1]][dep_col]
+            ds1_p = 0
+            ds2_p = 0
+            if len(ds1) > 8 & len(ds2) > 8:
+                ds1_p = normaltest(ds1)[1]
+                ds2_p = normaltest(ds2)[1]
+
+            #print(type(args[0]))
+            if (ds1_p > 5e-2) & (ds2_p > 5e-2):
+                #come from normal distribution so apply 2 samples student t-test
+                print(c1, comb[0], "normal distribution")
+                p_value = ttest_ind(ds1, ds2)[0]
+            else:
+                # come from non normal distribution so apply 2 samples Kolmogorov-Smirnov statistic
+                p_value = ks_2samp(ds1, ds2)[0]
+
+            if p_value < 5e-2:
+                res.loc[i] = [c1, comb[0], comb[1],p_value , p_value < 5e-2 ]
+                i = i + 1
+    return res
+
+
 if __name__=="__main__":
 
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+    train = pd.read_csv("C:/datasets/petfinder.my/train/train.csv")
+    test = pd.read_csv("C:/datasets/petfinder.my/test/test.csv")
+    print(Columns.ind_num_cat_columns.value)
+    print(train[Columns.ind_num_cat_columns.value].drop(["RescuerID"], axis=1))
+    #sys.exit()
     x_train, y_train, x_test, test_id = prepare_data()
+
 
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3", "MaturitySize",
@@ -230,7 +273,14 @@ if __name__=="__main__":
     corr_y_cont = x_train[ind_cont_columns]
     corr_y_cat = x_train[ind_num_cat_columns]
 
-    print(check_samples_diff(pd.concat([x_train,y_train], axis=1, sort=False).drop(["RescuerID"], axis=1),dep_columns[0]))
+    #print(x_train[Columns.ind_num_cat_columns.value[0]].drop(["RescuerID"], axis=1))
+
+    res = check_samples_diff2(
+         pd.concat([x_train[Columns.ind_num_cat_columns.value].drop(["RescuerID"], axis=1), y_train], axis=1,
+                   sort=False), dep_columns[0])
+    #print(res)
+
+    #print(check_samples_diff(pd.concat([x_train,y_train], axis=1, sort=False).drop(["RescuerID"], axis=1),dep_columns[0]))
 
     # res = by_skchi(corr_x, corr_y)
     # print(res)
