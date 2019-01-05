@@ -9,20 +9,31 @@ from scipy.stats import entropy
 import numpy as np
 from collections import Counter
 import math
-from petfinder.getdata import read_data
+from petfinder.get_explore import read_data
 from scipy.stats import ttest_rel
+from petfinder.get_explore import Columns
+from petfinder.preprocessing import conv_cat_variable
 
 
-def check_percentages(arr, indep_cols, dep_col):
+def vis_cat_percentages(arr, indep_cols, dep_col):
 
     for col in indep_cols:
         #fig, axes = plt.subplots(1, 2)
         df1 = arr[col].value_counts(normalize=True).rename("percentage").mul(100).reset_index()  # .sort_values(col)
         df1.rename(columns={"index":col}, inplace=True)
         ax1 = sns.catplot(x=col, y="percentage", data=df1, kind="bar")
+        ax1.set_xticklabels(rotation=90)
         df2 = arr.groupby([col])[dep_col[0]].value_counts(normalize=True).rename('percentage').mul(
             100).reset_index()  # .sort_values(col)
         ax2 = sns.catplot(x=col,y="percentage", data=df2, hue=dep_col[0], kind="bar")
+        ax2.set_xticklabels(rotation=90)
+        plt.show()
+
+def vis_num_relation(arr, indep_cols, dep_col):
+
+    for col in indep_cols:
+        #fig, axes = plt.subplots(1, 2)
+        ax1 = sns.boxplot(x=col, y=dep_col[0], data = arr)
         plt.show()
 
 if __name__ == "__main__":
@@ -30,14 +41,13 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     train, test = read_data()
-
-    ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt"]
-    ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3", "MaturitySize",
-                           "FurLength",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "Quantity", "State"]
-    ind_cat_conv_columns = ["RescuerID"]
-    ind_text_columns = ["Name", "Description"]
-    iden_columns = ["PetID"]
-    dep_columns = ["AdoptionSpeed"]
-
-    check_percentages(train[ind_num_cat_columns+dep_columns], ind_num_cat_columns, dep_columns)
+    train = conv_cat_variable(train)
+    test = conv_cat_variable(test)
+    # sns.catplot(y="Age", x="AdoptionSpeed", data = train, kind = "box")
+    #sns.distplot(train.Color3)
+    vis_num_relation(train, Columns.ind_cont_columns.value, Columns.dep_columns.value)
+    #vis_cat_percentages(train, Columns.ind_num_cat_columns.value, Columns.dep_columns.value)
+    conv_cat_variable(train)
+    #print(train)
+    #train.hist()
+    #plt.show()

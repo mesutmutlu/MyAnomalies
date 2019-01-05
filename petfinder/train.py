@@ -29,7 +29,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
-from sklearn.naive_bayes import ComplementNB
+#from sklearn.naive_bayes import ComplementNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import RadiusNeighborsClassifier
 from sklearn.neighbors import NearestCentroid
@@ -45,9 +45,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
-from skopt import gp_minimize
-from skopt import WeightedBayesSearchCV
-from skopt.space import Real, Categorical, Integer
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 from time import time
@@ -109,9 +106,9 @@ def iterate_by_randomsearch(train_x, train_y):
                                     "bootstrap": [True, False],
                                     "criterion": ["gini", "entropy"]}),
         #(GaussianProcessClassifier(), {}),
-        (LogisticRegression(), { "max_iter":sp.stats.randint(0,500),
-                               "solver":["sag", "saga"],
-                                 "multi_class":["auto"]}),
+        # (LogisticRegression(), { "max_iter":sp.stats.randint(0,500),
+        #                        "solver":["sag", "saga"],
+        #                          "multi_class":["auto"]}),
         (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
                                          "tol": sp.stats.uniform(0.0001, 0.05)}),
         (RidgeClassifier(), {"max_iter":sp.stats.randint(0, 2000),
@@ -121,10 +118,10 @@ def iterate_by_randomsearch(train_x, train_y):
                               "tol": sp.stats.uniform(0.0001, 0.05),
                            "loss":["hinge", "log", "modified_huber", "squared_hinge", "perceptron"],
                             "penalty":["none", "l2", "l1", "elasticnet"]}),
-        (BernoulliNB(), {}),
-        (MultinomialNB(), {}),
-        (GaussianNB(), {}),
-        (ComplementNB(), {}),
+        #(BernoulliNB(), {}),
+        #(MultinomialNB(), {}),
+        #(GaussianNB(), {}),
+        #(ComplementNB(), {}),
         (KNeighborsClassifier(), {"n_neighbors":sp.stats.randint(1, 50),
                                   "algorithm":["ball_tree", "kd_tree", "brute"],
                                   "leaf_size":sp.stats.randint(20,100),
@@ -298,14 +295,14 @@ if __name__ == "__main__":
     #predict(df)
 
     train_x, train_y, test_x, test_id = prepare_data()
-    #rs = randomsearchpipeline(train_x, train_y)
+    #rs = randomsearchpipeline(train_x.drop(["RescuerID"], axis=1), train_y)
 
     #print(rs)
     #sys.exit()
     #print(train_x)
     #print(train_y)
     #print(sp.stats.randint(1, 6).value)
-    clf = iterate_by_randomsearch(train_x, train_y.values.ravel())
+    clf = iterate_by_randomsearch(train_x.drop(["RescuerID"], axis=1), train_y.values.ravel())
     #test_bayes(train_x, train_y)
     predict(clf, train_x, train_y, test_x, test_id)
     #print(pred)

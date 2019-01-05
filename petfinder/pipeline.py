@@ -9,4 +9,4 @@ from scipy.stats import entropy
 import numpy as np
 from collections import Counter
 import math
-from petfinder.getdata import read_data
+from petfinder.get_explore import read_data

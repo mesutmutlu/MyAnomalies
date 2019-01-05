@@ -12,8 +12,10 @@ import math
 from petfinder.preprocessing import prepare_data
 from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp
 import datetime
-from petfinder.preprocessing import Columns
-from petfinder.getdata import read_data
+from petfinder.get_explore import read_data
+from petfinder.get_explore import Paths
+from petfinder.get_explore import Columns
+
 
 def cramers_v(x, y):
     confusion_matrix = pd.crosstab(x,y)
@@ -26,8 +28,9 @@ def cramers_v(x, y):
     kcorr = k-((k-1)**2)/(n-1)
     return np.sqrt(phi2corr/min((kcorr-1),(rcorr-1)))
 
+
 def conditional_entropy(x,y):
-    #for categorical vs numerical correlation
+    # for categorical vs numerical correlation
     # entropy of x given y
     y_counter = Counter(y)
     xy_counter = Counter(list(zip(x,y)))
@@ -41,7 +44,7 @@ def conditional_entropy(x,y):
 
 
 def theils_u(x, y):
-    #for categorical correlation
+    # for categorical correlation
     s_xy = conditional_entropy(x,y)
     x_counter = Counter(x)
     total_occurrences = sum(x_counter.values())
@@ -65,6 +68,7 @@ def by_theilsu(train,indep_cols, dep_cols):
     sns.heatmap(theilu, annot=True, fmt='.2f')
     plt.show()
 
+
 def correlation_ratio(categories, measurements):
     # for mix correlation
     fcat, _ = pd.factorize(categories)
@@ -84,6 +88,7 @@ def correlation_ratio(categories, measurements):
         eta = numerator/denominator
     return eta
 
+
 def by_correlation_ratio(train, cat_cols, num_cols):
     # for mix correlation
     theilu = pd.DataFrame(index=cat_cols, columns=train[num_cols].columns)
@@ -96,7 +101,8 @@ def by_correlation_ratio(train, cat_cols, num_cols):
     sns.heatmap(theilu, annot=True, fmt='.2f')
     plt.show()
 
-def by_skchi(indep,dep):
+
+def by_skchi(indep, dep):
 
     chi2_p = sk_chi(indep, dep)
     res = pd.DataFrame(columns=["Variable", "Chi2 Stat", "P-value", "P-Dependency"])
@@ -107,6 +113,7 @@ def by_skchi(indep,dep):
         i=i+1
     # print(res)
     return res
+
 
 def cramers_stat(indep, dep):
     i = 0
@@ -121,6 +128,7 @@ def cramers_stat(indep, dep):
         res.loc[i] = [col,np.sqrt(chi2 / (n*(min(confusion_matrix.shape)-1))) ]
         i = i + 1
     return res
+
 
 def cramers_corrected_stat(indep, dep):
     """ calculate Cramers V statistic for categorial-categorial association.
@@ -140,13 +148,14 @@ def cramers_corrected_stat(indep, dep):
         kcorr = k - ((k-1)**2)/(n-1)
         res.loc[i] = [col, np.sqrt(phi2corr / min( (kcorr-1), (rcorr-1)))]
         i = i + 1
+    return res
+
 
 def by_sschi(indep,dep):
 
     # chi-squared test with similar proportions
     df = pd.concat([indep, dep],axis=1, sort=False)
-    #print(df)
-    res = pd.DataFrame(columns=["Variable","Degrees of Freedom", "Probability", "Critical Value", "Stats", "Stats Res", "significance", "P-Value", "P Res"])
+    res = pd.DataFrame(columns=indep)
     print(res)
     i=0
     for col in list(indep.columns.values):
@@ -174,6 +183,7 @@ def by_sschi(indep,dep):
 
     return res
 
+
 def by_paired_ttest(arr):
 
     for c in arr.columns.values:
@@ -181,6 +191,8 @@ def by_paired_ttest(arr):
         for i in range(0, len(arr.columns.values)):
             #stats = ttest_rel(arr[c], arr[i])
             print(c, arr[i].name)
+    pass
+
 
 def check_samples_diff(df, dep_col):
     res = pd.DataFrame(columns=["Column", "Value1", "Value2", "P-Value", "Difference?"])
@@ -215,7 +227,8 @@ def check_samples_diff(df, dep_col):
                 i = i + 1
     return res
 
-#check adoption speed distributions over categorical variables
+
+# check adoption speed distributions over categorical variables
 def check_samples_diff2(df, dep_col):
     res = pd.DataFrame(columns=["Column", "Value1", "Value2", "P-Value", "Difference?"])
     i = 0
@@ -250,52 +263,13 @@ def check_samples_diff2(df, dep_col):
     return res
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    train = pd.read_csv("C:/datasets/petfinder.my/train/train.csv")
-    test = pd.read_csv("C:/datasets/petfinder.my/test/test.csv")
-    print(Columns.ind_num_cat_columns.value)
-    print(train[Columns.ind_num_cat_columns.value].drop(["RescuerID"], axis=1))
-    #sys.exit()
-    x_train, y_train, x_test, test_id = prepare_data()
+    x_train, y_train, x_test, id_test = prepare_data()
+
+    print(by_skchi(x_train.drop(["RescuerID"], axis=1), y_train))
 
 
-    ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt"]
-    ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3", "MaturitySize",
-                           "FurLength", "DescScore", "DescMagnitude",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "Quantity", "State", "RescuerID"]
-    iden_columns = ["PetID"]
-    dep_columns = ["AdoptionSpeed"]
-
-    corr_y_cont = x_train[ind_cont_columns]
-    corr_y_cat = x_train[ind_num_cat_columns]
-
-    #print(x_train[Columns.ind_num_cat_columns.value[0]].drop(["RescuerID"], axis=1))
-
-    res = check_samples_diff2(
-         pd.concat([x_train[Columns.ind_num_cat_columns.value].drop(["RescuerID"], axis=1), y_train], axis=1,
-                   sort=False), dep_columns[0])
-    #print(res)
-
-    #print(check_samples_diff(pd.concat([x_train,y_train], axis=1, sort=False).drop(["RescuerID"], axis=1),dep_columns[0]))
-
-    # res = by_skchi(corr_x, corr_y)
-    # print(res)
-    #
-    # res = by_sschi(corr_x, corr_y)
-    # print(res)
-    #print(pd.concat([corr_y_cat, y_train], axis=1, sort=False))
-    #by_theilsu(pd.concat([corr_y_cat, y_train], axis=1, sort=False), ind_num_cat_columns, dep_columns)
-    #by_correlation_ratio(pd.concat([corr_y_cont, y_train], axis=1, sort=False), ind_num_cat_columns, dep_columns)
-    #f, ax = plt.subplots(figsize=(10, 8))
-    #corr = pd.concat([x_train, y_train], axis=1, sort=False).corr()
-#    corr.style.background_gradient()
-    #print(corr)
-    # sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool), cmap=sns.diverging_palette(220, 10, as_cmap=True),
-    #             square=True, ax=ax)
-
-    # sns.pairplot(pd.concat([x_train, y_train], axis=1, sort=False),hue="AdoptionSpeed", diag_kind ="hist")
-    # plt.show()
