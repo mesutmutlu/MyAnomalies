@@ -269,7 +269,7 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     x_train, y_train, x_test, id_test = prepare_data()
-
+    x_train.drop(["RescuerID"], axis=1, inplace=True)
     print(by_skchi(x_train.drop(["RescuerID"], axis=1), y_train))
 
 

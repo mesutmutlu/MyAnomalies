@@ -54,6 +54,10 @@ import pandas as pd
 import scipy as sp
 import random
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import cohen_kappa_score, make_scorer
+import xgboost as xgb
+import lightgbm as lgb
+
 
 def report(df, alg, best_est, perf, est, results, n_top=3):
     for i in range(1, n_top + 1):
@@ -93,12 +97,12 @@ def iterate_by_randomsearch(train_x, train_y):
                                     "min_samples_split": sp.stats.randint(2, 11),
                                     "bootstrap": [True, False],
                                     "criterion": ["gini", "entropy"]}),
-        # (GradientBoostingClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-        #                                "loss": ["deviance", "exponential"],
-        #                                "max_features": sp.stats.randint(1, 7),
-        #                                "min_samples_split": sp.stats.randint(2, 11),
-        #                                "criterion": ["friedman_mse", "mse", "mae"],
-        #                                "max_depth": [3, None]}),
+        (GradientBoostingClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                       "loss": ["deviance", "exponential"],
+                                       "max_features": sp.stats.randint(1, 7),
+                                       "min_samples_split": sp.stats.randint(2, 11),
+                                       "criterion": ["friedman_mse", "mse", "mae"],
+                                       "max_depth": [3, None]}),
         (RandomForestClassifier(), {"n_estimators": sp.stats.randint(25, 100),
                                     "max_depth": [3, None],
                                     "max_features": sp.stats.randint(1, 7),
@@ -162,16 +166,18 @@ def iterate_by_randomsearch(train_x, train_y):
     for clf in classifiers:
         print(type(clf[0]).__name__, "started at", datetime.now())
         n_iter=20
+        kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
         random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
-                                           n_iter=n_iter, cv=5)
+                                           n_iter=n_iter, cv=5, scoring=kappa_scorer)
         start = time()
         random_search.fit(train_x, train_y)
         #print("%s RandomizedSearchCV took %.2f seconds for %d candidates"
         #      " parameter settings." % (type(clf[0]).__name__,(time() - start), n_iter))
 
         df = report(df, type(clf[0]).__name__, random_search.best_estimator_ ,  time() - start, n_iter, random_search.cv_results_)
-        print(df)
+    print(df.sort_values(by="mean", ascending=False))
     best = df['mean'].idxmax()
+
     est = df.loc[best, 'best_estimator']
     print(est)
     return est
@@ -296,13 +302,14 @@ if __name__ == "__main__":
 
     train_x, train_y, test_x, test_id = prepare_data()
     #rs = randomsearchpipeline(train_x.drop(["RescuerID"], axis=1), train_y)
-
+    train_x.drop(["RescuerID"], axis=1, inplace=True)
+    test_x.drop(["RescuerID"], axis=1, inplace=True)
     #print(rs)
     #sys.exit()
     #print(train_x)
     #print(train_y)
     #print(sp.stats.randint(1, 6).value)
-    clf = iterate_by_randomsearch(train_x.drop(["RescuerID"], axis=1), train_y.values.ravel())
+    clf = iterate_by_randomsearch(train_x, train_y.values.ravel())
     #test_bayes(train_x, train_y)
     predict(clf, train_x, train_y, test_x, test_id)
     #print(pred)

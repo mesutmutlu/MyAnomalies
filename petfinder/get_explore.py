@@ -89,8 +89,12 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
-    print(train.describe)
-    print(test)
+    print(train.describe(include="all"))
+    #print(train.values.reshape())
+
+    print(train.sort_values(by="Age", ascending=False))
+    print(train.sort_values(by="Age", ascending=False)[:5])
+    #print(test)
 
 
 

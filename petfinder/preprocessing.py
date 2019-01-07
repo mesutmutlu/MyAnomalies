@@ -38,10 +38,10 @@ def prepare_data():
     test["DescScore"].fillna(0, inplace=True)
     test["DescMagnitude"].fillna(0, inplace=True)
     # as descscore and descmagnitude have been increase by 1, 1 is the older 0
-    train["DescMagnitude"] = train["DescMagnitude"] + 1
-    train["DescScore"] = train["DescScore"] + 1
-    test["DescMagnitude"] = test["DescMagnitude"] + 1
-    test["DescScore"] = test["DescScore"] + 1
+    # train["DescMagnitude"] = train["DescMagnitude"] + 1
+    # train["DescScore"] = train["DescScore"] + 1
+    # test["DescMagnitude"] = test["DescMagnitude"] + 1
+    # test["DescScore"] = test["DescScore"] + 1
 
     train = label_encoder(train, ["RescuerID"])
     test = label_encoder(test, ["RescuerID"])
@@ -50,7 +50,7 @@ def prepare_data():
     # train = conv_cat_variable(train)
     # test = conv_cat_variable(test)
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
-    print(train_x)
+    #print(train_x)
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
