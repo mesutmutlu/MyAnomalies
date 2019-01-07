@@ -45,8 +45,8 @@ def prepare_data():
 
     train = label_encoder(train, ["RescuerID"])
     test = label_encoder(test, ["RescuerID"])
-    train[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
-    test[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
+    #train[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
+    #test[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     # train = conv_cat_variable(train)
     # test = conv_cat_variable(test)
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
