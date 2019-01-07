@@ -59,6 +59,8 @@ import xgboost as xgb
 import lightgbm as lgb
 from sklearn.ensemble import VotingClassifier
 from random import choice
+from joblib import parallel_backend
+from joblib import Parallel, delayed
 
 
 def report(df, alg, best_est, perf, est, results, n_top=3):
@@ -87,96 +89,96 @@ def iterate_by_randomsearch(train_x, train_y):
         #                                "algorithm": ["ball_tree", "kd_tree", "brute"],
         #                                "leaf_size": sp.stats.randint(20, 100),
         #                                "p": [1, 2]})
-        #(AdaBoostClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-        #                         "algoorithm": ["SAMME","SAMME.R"],
-        #                           'learning_rate': sp.stats.uniform(0.0001, 1)  }),
-        # (BaggingClassifier(),{"n_estimators": sp.stats.randint(25, 100),
-        #                                      "max_features": sp.stats.randint(1, 7),
-        #                                      "bootstrap": [True, False],
-        #                                      "bootstrap_features": [True, False],
-        #                                         }),
-        # (ExtraTreesClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-        #                             "max_depth": sp.stats.randint(3, 10),
-        #                             "max_features": sp.stats.randint(1, 7),
-        #                             "min_samples_split": sp.stats.randint(2, 11),
-        #                             "bootstrap": [True, False],
-        #                             "criterion": ["gini", "entropy"]}),
-        # # (GradientBoostingClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-        # #                                "loss": ["deviance", "exponential"],
-        # #                                "max_features": sp.stats.randint(1, 7),
-        # #                                "min_samples_split": sp.stats.randint(2, 11),
-        # #                                "criterion": ["friedman_mse", "mse", "mae"],
-        # #                                "max_depth": sp.stats.randint(3, 10)}),
-        # (RandomForestClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-        #                             "max_depth": sp.stats.randint(3, 10),
-        #                             "max_features": sp.stats.randint(1, 7),
-        #                             "min_samples_split": sp.stats.randint(2, 11),
-        #                             "bootstrap": [True, False],
-        #                             "criterion": ["gini", "entropy"]}),
-        # #(GaussianProcessClassifier(), {}),
-        # # (LogisticRegression(), { "max_iter":sp.stats.randint(0,500),
-        # #                        "solver":["sag", "saga"],
-        # #                          "multi_class":["auto"]}),
-        # (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
-        #                                  "tol": sp.stats.uniform(0.0001, 0.05)}),
-        # (RidgeClassifier(), {"max_iter":sp.stats.randint(0, 2000),
-        #                      "tol": sp.stats.uniform(0.0001, 0.05),
-        #                      "solver":["svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga"]}),
-        # (SGDClassifier(), {"max_iter":sp.stats.randint(0, 2000),
-        #                       "tol": sp.stats.uniform(0.0001, 0.05),
-        #                    "loss":["hinge", "log", "modified_huber", "squared_hinge", "perceptron"],
-        #                     "penalty":["none", "l2", "l1", "elasticnet"]}),
-        # #(BernoulliNB(), {}),
-        # #(MultinomialNB(), {}),
-        # #(GaussianNB(), {}),
-        # #(ComplementNB(), {}),
-        # (KNeighborsClassifier(), {"n_neighbors":sp.stats.randint(1, 50),
-        #                           "algorithm":["ball_tree", "kd_tree", "brute"],
-        #                           "leaf_size":sp.stats.randint(20,100),
-        #                           "p":[1,2]}),
-        # (NearestCentroid(),{}),
-        # # (MLPClassifier(), {"hidden_layer_sizes":(random.randint(10,1000),),
-        # #                   "activation":["identity", "logistic", "tanh", "relu"],
-        # #                   "solver": ["lbfgs", "sgd", "adam"],
-        # #                    "alpha":sp.stats.uniform(0.00001, 0.001),
-        # #                    "learning_rate":["constant", "invscaling", "adaptive"],
-        # #                    "max_iter": sp.stats.randint(0, 2000),
-        # #                    "tol": sp.stats.uniform(0.0001, 0.05)}),
-        # (DecisionTreeClassifier(), {          "max_depth": sp.stats.randint(3, 10),
-        #                                       "max_features": sp.stats.randint(1, 7),
-        #                                       "min_samples_split": sp.stats.randint(2, 11),
-        #                                       "criterion": ["gini", "entropy"]}),
-        # # (LinearSVC(), {"penalty":["l2"],
-        # #         #                "tol":sp.stats.uniform(1e-5, 1e-3),
-        # #         #                "C":sp.stats.uniform(0.1, 5),
-        # #         #                "max_iter":sp.stats.randint(0, 2000)}),
-        # # (NuSVC(),{"gamma":sp.stats.uniform(1e-4, 1e-2),
-        # #           "kernel":["linear", "poly", "rbf", "sigmoid"],
-        # #           "tol":sp.stats.uniform(1e-4, 1e-2),
-        # #           }),
-        # # (SVC(), {"gamma":sp.stats.uniform(1e-4, 1e-2),
-        # #                   "kernel":["linear", "poly", "rbf", "sigmoid"],
-        # #                   "tol":sp.stats.uniform(1e-4, 1e-2),}),
-        # # (LinearDiscriminantAnalysis(),{"solver":["svd","lsqr", "eigen"],
-        # #                                   "n_components":random.randint(2,4),
-        # #                                    "tol":sp.stats.uniform(1e-5, 1e-2)
-        # # }),
-        # (QuadraticDiscriminantAnalysis(), {"tol":sp.stats.uniform(1e-5, 1e-2)}),
+        (AdaBoostClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                  'learning_rate': sp.stats.uniform(0.0001, 1)  }),
+        (BaggingClassifier(),{"n_estimators": sp.stats.randint(25, 100),
+                                             "max_features": sp.stats.randint(1, 7),
+                                             "bootstrap": [True, False],
+                                             "bootstrap_features": [True, False],
+                                                }),
+        (ExtraTreesClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                    "max_depth": sp.stats.randint(3, 10),
+                                    "max_features": sp.stats.randint(1, 7),
+                                    "min_samples_split": sp.stats.randint(2, 11),
+                                    "bootstrap": [True, False],
+                                    "criterion": ["gini", "entropy"]}),
+        # (GradientBoostingClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+        #                                "loss": ["deviance", "exponential"],
+        #                                "max_features": sp.stats.randint(1, 7),
+        #                                "min_samples_split": sp.stats.randint(2, 11),
+        #                                "criterion": ["friedman_mse", "mse", "mae"],
+        #                                "max_depth": sp.stats.randint(3, 10)}),
+        (RandomForestClassifier(), {"n_estimators": sp.stats.randint(25, 100),
+                                    "max_depth": sp.stats.randint(3, 10),
+                                    "max_features": sp.stats.randint(1, 7),
+                                    "min_samples_split": sp.stats.randint(2, 11),
+                                    "bootstrap": [True, False],
+                                    "criterion": ["gini", "entropy"]}),
+        #(GaussianProcessClassifier(), {}),
+        # (LogisticRegression(), { "max_iter":sp.stats.randint(0,500),
+        #                        "solver":["sag", "saga"],
+        #                          "multi_class":["auto"]}),
+        (PassiveAggressiveClassifier(), {"max_iter":sp.stats.randint(0, 1230),
+                                         "tol": sp.stats.uniform(0.0001, 0.05)}),
+        (RidgeClassifier(), {"max_iter":sp.stats.randint(0, 2000),
+                             "tol": sp.stats.uniform(0.0001, 0.05),
+                             "solver":["svd", "cholesky", "lsqr", "sparse_cg", "sag", "saga"]}),
+        (SGDClassifier(), {"max_iter":sp.stats.randint(0, 2000),
+                              "tol": sp.stats.uniform(0.0001, 0.05),
+                           "loss":["hinge", "log", "modified_huber", "squared_hinge", "perceptron"],
+                            "penalty":["none", "l2", "l1", "elasticnet"]}),
+        #(BernoulliNB(), {}),
+        #(MultinomialNB(), {}),
+        #(GaussianNB(), {}),
+        #(ComplementNB(), {}),
+        (KNeighborsClassifier(), {"n_neighbors":sp.stats.randint(1, 50),
+                                  "algorithm":["ball_tree", "kd_tree", "brute"],
+                                  "leaf_size":sp.stats.randint(20,100),
+                                  "p":[1,2]}),
+        (NearestCentroid(),{}),
+        # (MLPClassifier(), {"hidden_layer_sizes":(random.randint(10,1000),),
+        #                   "activation":["identity", "logistic", "tanh", "relu"],
+        #                   "solver": ["lbfgs", "sgd", "adam"],
+        #                    "alpha":sp.stats.uniform(0.00001, 0.001),
+        #                    "learning_rate":["constant", "invscaling", "adaptive"],
+        #                    "max_iter": sp.stats.randint(0, 2000),
+        #                    "tol": sp.stats.uniform(0.0001, 0.05)}),
+        (DecisionTreeClassifier(), {          "max_depth": sp.stats.randint(3, 10),
+                                              "max_features": sp.stats.randint(1, 7),
+                                              "min_samples_split": sp.stats.randint(2, 11),
+                                              "criterion": ["gini", "entropy"]}),
+        # (LinearSVC(), {"penalty":["l2"],
+        #         #                "tol":sp.stats.uniform(1e-5, 1e-3),
+        #         #                "C":sp.stats.uniform(0.1, 5),
+        #         #                "max_iter":sp.stats.randint(0, 2000)}),
+        # (NuSVC(),{"gamma":sp.stats.uniform(1e-4, 1e-2),
+        #           "kernel":["linear", "poly", "rbf", "sigmoid"],
+        #           "tol":sp.stats.uniform(1e-4, 1e-2),
+        #           }),
+        # (SVC(), {"gamma":sp.stats.uniform(1e-4, 1e-2),
+        #                   "kernel":["linear", "poly", "rbf", "sigmoid"],
+        #                   "tol":sp.stats.uniform(1e-4, 1e-2),}),
+        # (LinearDiscriminantAnalysis(),{"solver":["svd","lsqr", "eigen"],
+        #                                   "n_components":random.randint(2,4),
+        #                                    "tol":sp.stats.uniform(1e-5, 1e-2)
+        # }),
+        (QuadraticDiscriminantAnalysis(), {"tol":sp.stats.uniform(1e-5, 1e-2)}),
         (xgb.XGBClassifier(), {"n_estimators": sp.stats.randint(25, 100),
                                     "max_depth": sp.stats.randint(3, 10)}),
-        (lgb.LGBMClassifier(), {'num_leaves': choice([27, 31, 61, 81, 127, 197, 231, 275, 302]),
-              'bagging_fraction': choice([0.5, 0.7, 0.8, 0.9]),
-              'learning_rate': choice([0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5]),
-              'min_data': choice([300, 400, 450, 500, 550, 650]),
-              'is_unbalance': choice([True, False]),
-              'max_bin': choice([3, 5, 10, 12, 18, 20, 22]),
-              'boosting_type' : choice(['gbdt', 'dart']),
-              'bagging_freq': choice([3, 9, 11, 15, 17, 23, 31]),
-              'max_depth': choice([3, 4, 5, 6, 7, 9, 11]),
-              'feature_fraction': choice([0.5, 0.7, 0.8, 0.9]),
-              'lambda_l1': choice([0, 10, 20, 30, 40]),
-              'objective': 'binary',
-              'metric': 'auc'} )
+        (lgb.LGBMClassifier(), {'num_leaves': sp.stats.randint(25, 330),
+              #'bagging_fraction': sp.stats.uniform(0.4, 0.9),
+              #'learning_rate': sp.stats.uniform(0.001, 0.5),
+              #'min_data': sp.stats.randint(50,700),
+              #'is_unbalance': [True, False],
+              #'max_bin': sp.stats.randint(3,25),
+              'boosting_type' : ['gbdt', 'dart'],
+              #'bagging_freq': sp.stats.randint(3,35),
+              'max_depth': sp.stats.randint(3,15),
+              #'feature_fraction': sp.stats.uniform(0.4, 0.9),
+              #'lambda_l1': sp.stats.randint(0,45),
+              #'objective': 'multiclass',
+                                "n_jobs":[-1]
+                                         } )
 
 
     ]
@@ -184,16 +186,19 @@ def iterate_by_randomsearch(train_x, train_y):
     df = pd.DataFrame(columns=['alg', 'best_estimator', 'perf', 'est','rank','mean','std', 'parameters'])
     for clf in classifiers:
         print(type(clf[0]).__name__, "started at", datetime.now())
-        n_iter=20
+        n_iter=10
         kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
         random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
                                            n_iter=n_iter, cv=5, scoring=kappa_scorer)
         start = time()
         random_search.fit(train_x, train_y)
+        # with parallel_backend(backend='multiprocessing'):
+        #     Parallel()(delayed(random_search.fit(train_x, train_y)))
         #print("%s RandomizedSearchCV took %.2f seconds for %d candidates"
         #      " parameter settings." % (type(clf[0]).__name__,(time() - start), n_iter))
 
         df = report(df, type(clf[0]).__name__, random_search.best_estimator_ ,  time() - start, n_iter, random_search.cv_results_)
+        print(type(clf[0]).__name__, "ended at", datetime.now())
     print(df.sort_values(by="mean", ascending=False))
     best = df['mean'].idxmax()
 
@@ -338,6 +343,7 @@ if __name__ == "__main__":
     #print(train_x)
     #print(train_y)
     #print(sp.stats.randint(1, 6).value)
+
     clf = iterate_by_randomsearch(train_x, train_y.values.ravel())
     #for c in clf[""]:
         #print(c)
