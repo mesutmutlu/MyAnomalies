@@ -29,7 +29,7 @@ class Columns(Enum):
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
-    tfidf = ["svd_"+i for i in range(120)]
+    desc_cols = ["svd_"+i for i in range(120)]
 
 
 def read_data():
