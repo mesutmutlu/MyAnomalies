@@ -59,8 +59,8 @@ import xgboost as xgb
 import lightgbm as lgb
 from sklearn.ensemble import VotingClassifier
 from random import choice
-from joblib import parallel_backend
-from joblib import Parallel, delayed
+# from joblib import parallel_backend
+# from joblib import Parallel, delayed
 
 
 def report(df, alg, best_est, perf, est, results, n_top=3):
@@ -135,7 +135,7 @@ def iterate_by_randomsearch(train_x, train_y):
                                   "algorithm":["ball_tree", "kd_tree", "brute"],
                                   "leaf_size":sp.stats.randint(20,100),
                                   "p":[1,2]}),
-        (NearestCentroid(),{}),
+        #(NearestCentroid(),{}),
         # (MLPClassifier(), {"hidden_layer_sizes":(random.randint(10,1000),),
         #                   "activation":["identity", "logistic", "tanh", "relu"],
         #                   "solver": ["lbfgs", "sgd", "adam"],
@@ -189,7 +189,7 @@ def iterate_by_randomsearch(train_x, train_y):
         n_iter=10
         kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
         random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
-                                           n_iter=n_iter, cv=5, scoring=kappa_scorer)
+                                           n_iter=n_iter, cv=5, scoring=kappa_scorer, n_jobs = 2)
         start = time()
         random_search.fit(train_x, train_y)
         # with parallel_backend(backend='multiprocessing'):
