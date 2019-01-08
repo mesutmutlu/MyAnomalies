@@ -13,6 +13,8 @@ from petfinder.get_explore import read_data
 from sklearn.preprocessing import LabelEncoder
 from enum import Enum
 from petfinder.get_explore import Columns, Paths
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
 
 
 def fill_na(arr, cols, val):
@@ -20,6 +22,29 @@ def fill_na(arr, cols, val):
         arr[col].fillna(val, inplace=True)
     return arr
 
+def tfidf(train , test):
+    train_desc = train.Description.fillna("none").values
+    test_desc = test.Description.fillna("none").values
+
+    tfv = TfidfVectorizer(min_df=2, max_features=None,
+                          strip_accents='unicode', analyzer='word', token_pattern=r'(?u)\b\w+\b',
+                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1,
+                          )
+
+    # Fit TFIDF
+    tfv.fit(list(train_desc))
+    X = tfv.transform(train_desc)
+    X_test = tfv.transform(test_desc)
+
+    svd = TruncatedSVD(n_components=120)
+    svd.fit(X)
+    print(svd.explained_variance_ratio_.sum())
+    print(svd.explained_variance_ratio_)
+    X = svd.transform(X)
+    train_desc = pd.DataFrame(X, columns=['svd_{}'.format(i) for i in range(120)])
+    X_test = svd.transform(X_test)
+    test_desc = pd.DataFrame(X_test, columns=['svd_{}'.format(i) for i in range(120)])
+    return train_desc, test_desc
 
 def label_encoder(arr, cols):
     enc = LabelEncoder()
@@ -54,6 +79,9 @@ def prepare_data():
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
+    train_desc, test_desc = tfidf(train, test)
+    train_x = pd.concat([train_x, train_desc], axis=1)
+    test_x = pd.concat([test_x, test_desc], axis=1)
     return train_x, train_y, test_x, test_id
 
 
@@ -85,5 +113,6 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    #train, test = read_data()
+    train, test = read_data()
+    #tfidf(train, test)
     train_x, train_y, test_x, test_id = prepare_data()
