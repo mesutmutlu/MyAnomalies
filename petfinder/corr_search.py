@@ -56,15 +56,19 @@ def theils_u(x, y):
         return (s_x - s_xy) / s_x
 
 
-def by_theilsu(train,indep_cols, dep_cols):
+def by_theilsu(train,cols):
     # for categorical correlation
-    theilu = pd.DataFrame(index=dep_cols, columns=train[indep_cols].columns)
-    columns = train[indep_cols].columns
-    for j in range(0, len(columns)):
-        u = theils_u(train[dep_cols[0]].tolist(), train[columns[j]].tolist())
-        theilu.loc[:, columns[j]] = u
+    theilu = pd.DataFrame(index=cols, columns=cols)
+    i = 0
+    for c1 in cols:
+        for c2 in cols:
+            u = theils_u(train[c1].tolist(), train[c2].tolist())
+            theilu.loc[c1, c2] = u
+        i = i+1
     theilu.fillna(value=np.nan, inplace=True)
-    plt.figure(figsize=(20, 1))
+    #plt.figure(figsize=(20, 1))
+    print(theilu)
+    #result = theilu.pivot(index='SymmetricDivision', columns='MutProb', values='value')
     sns.heatmap(theilu, annot=True, fmt='.2f')
     plt.show()
 
@@ -105,7 +109,7 @@ def by_correlation_ratio(train, cat_cols, num_cols):
 def by_skchi(indep, dep):
 
     chi2_p = sk_chi(indep, dep)
-    res = pd.DataFrame(columns=["Variable", "Chi2 Stat", "P-value", "P-Dependency"])
+    res = pd.DataFrame(columns=["Variable", "Chi2 Stat", "P-value", "Dependency"])
     i=0
     for col in list(indep.columns.values):
         #print(col)
@@ -155,7 +159,7 @@ def by_sschi(indep,dep):
 
     # chi-squared test with similar proportions
     df = pd.concat([indep, dep],axis=1, sort=False)
-    res = pd.DataFrame(columns=indep)
+    res = pd.DataFrame(columns=["col", "dof", "prob", "critical", "stat", "s_res", "alpha", "p" , "p_res"])
     print(res)
     i=0
     for col in list(indep.columns.values):
@@ -269,7 +273,25 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     x_train, y_train, x_test, id_test = prepare_data()
-    x_train.drop(["RescuerID"], axis=1, inplace=True)
-    print(by_skchi(x_train.drop(["RescuerID"], axis=1), y_train))
+    #x_train.drop(["RescuerID", "DescScore", "DescMagnitude"], axis=1, inplace=True)
+    #x_train.drop(Columns.desc_cols.value, axis=1, inplace=True)
+    #print(x_train[Columns.ind_num_cat_columns.value],)
+    # print(by_skchi(x_train[Columns.ind_num_cat_columns.value], y_train))
+    # print(by_sschi(x_train[Columns.ind_num_cat_columns.value], y_train))
 
+    # df_a = pd.concat([x_train[Columns.ind_num_cat_columns.value], y_train], axis=1)
+    # print(by_theilsu(pd.concat([x_train[Columns.ind_num_cat_columns.value],y_train],axis=1),
+    #                  Columns.ind_num_cat_columns.value+Columns.dep_columns.value))
+
+    # flights = sns.load_dataset("flights")
+    # flights = flights.pivot("month", "year", "passengers")
+    # print(flights)
+
+    # check correlation for numerical values
+    ds = pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1)
+    print(ds)
+    print(ds.corr())
+    plt.rcParams["figure.figsize"] = [10, 10]
+    sns.heatmap(ds.corr(), annot=True, fmt='.2f')
+    plt.show()
 

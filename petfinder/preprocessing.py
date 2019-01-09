@@ -79,9 +79,9 @@ def prepare_data():
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
-    train_desc, test_desc = tfidf(train, test)
-    train_x = pd.concat([train_x, train_desc], axis=1)
-    test_x = pd.concat([test_x, test_desc], axis=1)
+    #train_desc, test_desc = tfidf(train, test)
+    #train_x = pd.concat([train_x, train_desc], axis=1)
+    #test_x = pd.concat([test_x, test_desc], axis=1)
     return train_x, train_y, test_x, test_id
 
 

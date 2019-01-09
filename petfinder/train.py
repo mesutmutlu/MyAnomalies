@@ -351,3 +351,9 @@ if __name__ == "__main__":
     voting_predict(clf, train_x, train_y, test_x, test_id)
     #print(pred)
 
+
+
+# to do
+# different algorithms rather than the versions of same
+# input tfidf
+# predict differently for cat and dogs

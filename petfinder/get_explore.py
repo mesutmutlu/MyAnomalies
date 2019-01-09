@@ -22,14 +22,15 @@ class Paths(Enum):
         base = "C:/datasets/petfinder.my/"
 
 class Columns(Enum):
-    ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "FurLength", "MaturitySize", "Quantity",
+    ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity",
                         "DescScore", "DescMagnitude"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID"]
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID",
+                           "FurLength", "MaturitySize"]
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
-    desc_cols = ["svd_"+i for i in range(120)]
+    desc_cols = ["svd_"+str(i) for i in range(120)]
 
 
 def read_data():
