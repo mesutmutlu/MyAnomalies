@@ -147,9 +147,14 @@ def iterate_by_randomsearch(train_x, train_y):
         print(type(clf[0]).__name__, "started at", datetime.now())
         n_iter=10
         kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
-        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], cv=folds, scoring=kappa_scorer, n_jobs = 2)
+        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1],
+                                           n_iter=n_iter, cv=folds, scoring=kappa_scorer, n_jobs = 2)
         start = time()
         random_search.fit(train_x, train_y)
+        # with parallel_backend(backend='multiprocessing'):
+        #     Parallel()(delayed(random_search.fit(train_x, train_y)))
+        #print("%s RandomizedSearchCV took %.2f seconds for %d candidates"
+        #      " parameter settings." % (type(clf[0]).__name__,(time() - start), n_iter))
 
         df = report(df, type(clf[0]).__name__, random_search.best_estimator_ ,  time() - start, n_iter, random_search.cv_results_)
         #print(type(clf[0]).__name__, "ended at", datetime.now())
@@ -176,20 +181,45 @@ class DummyEstimator(BaseEstimator):
     def score(self): pass
 
 
-def randomsearchpipeline(train_x, train_y):
-    classifiers = [
-        {"clf" : [AdaBoostClassifier()], "n_estimators": sp.stats.randint(25, 100)},
-        {"clf" : [BaggingClassifier()],"n_estimators": sp.stats.randint(25, 100),
-                                              "max_features": sp.stats.randint(1, 7),
-                                              "bootstrap": [True, False],
-                                              "bootstrap_features": [True, False],
-                                                 }]
+def by_pipeline(train_x, train_y):
 
-    pipe = Pipeline([("clf", DummyEstimator())])
-    random_search = RandomizedSearchCV(pipe, classifiers,
-                                           n_iter=2, cv=5)
-    random_search.fit(train_x.values, train_y.values.ravel())
-    return random_search
+    pipeline = Pipeline([
+        ('xgb', xgb.XGBClassifier()),
+        ('lgb', lgb.LGBMClassifier()),
+    ])
+
+    parameters = {
+        'xgb__n_estimators': sp.stats.randint(25, 200),
+        'xgb__max_depth': p.stats.randint(3, 30),
+        'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
+        'lgb__num_leaves': sp.stats.randint(25, 330),
+        # 'lgb__bagging_fraction': sp.stats.uniform(0.4, 0.9),
+        'lgb__learning_rate': sp.stats.uniform(0.001, 0.5),
+        # 'lgb__min_data': sp.stats.randint(50,700),
+        # 'lgb__is_unbalance': [True, False],
+        # 'lgb__max_bin': sp.stats.randint(3,25),
+        'lgb__boosting_type': ['gbdt', 'dart'],
+        # 'lgb__bagging_freq': sp.stats.randint(3,35),
+        'lgb__max_depth': sp.stats.randint(3, 15),
+        # 'lgb__feature_fraction': sp.stats.uniform(0.4, 0.9),
+        # 'lgb__lambda_l1': sp.stats.randint(0,45),
+        # 'lgb__objective': 'multiclass',
+        "lgb__n_jobs": [-1],
+        "lgb__silent": [False],
+    }
+    kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
+
+
+
+    df = pd.DataFrame(columns=['alg', 'best_estimator', 'perf', 'est', 'rank', 'mean', 'std', 'parameters'])
+    rskf = RepeatedStratifiedKFold(n_splits=5, n_repeats=2, random_state=42)
+    folds = rskf.split(train_x, train_y)
+    random_search = RandomizedSearchCV(pipeline, parameters,
+                                       cv=folds, scoring=kappa_scorer, n_jobs=2)
+    random_search.fit(train_x, train_y)
+
+
+    print(random_search.best_estimator_)
 
 def voting_predict(clfs, mean, train_x, train_y, test_x, test_id):
 
@@ -223,13 +253,13 @@ if __name__ == "__main__":
     #print(train_y)
     #print(sp.stats.randint(1, 6).value)
 
-    clf, mean = iterate_by_randomsearch(train_x, train_y.values.ravel())
-    print(clf)
-    print(mean)
+    by_pipeline(train_x, train_y)
+    #print(clf)
+    #print(mean)
     #for c in clf[""]:
         #print(c)
     #test_bayes(train_x, train_y)
-    voting_predict(clf, mean, train_x, train_y, test_x, test_id)
+    #voting_predict(clf, mean, train_x, train_y, test_x, test_id)
     #print(pred)
 
 
