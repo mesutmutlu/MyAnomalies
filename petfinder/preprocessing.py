@@ -23,8 +23,8 @@ def fill_na(arr, cols, val):
     return arr
 
 def tfidf(train , test):
-    train_desc = train.Description.fillna("none").values
-    test_desc = test.Description.fillna("none").values
+    train_desc = train.Description
+    test_desc = test.Description
 
     tfv = TfidfVectorizer(min_df=2, max_features=None,
                           strip_accents='unicode', analyzer='word', token_pattern=r'(?u)\b\w+\b',
@@ -38,8 +38,8 @@ def tfidf(train , test):
 
     svd = TruncatedSVD(n_components=120)
     svd.fit(X)
-    print(svd.explained_variance_ratio_.sum())
-    print(svd.explained_variance_ratio_)
+    #print(svd.explained_variance_ratio_.sum())
+    #print(svd.explained_variance_ratio_)
     X = svd.transform(X)
     train_desc = pd.DataFrame(X, columns=['svd_{}'.format(i) for i in range(120)])
     X_test = svd.transform(X_test)
@@ -55,21 +55,19 @@ def label_encoder(arr, cols):
     return arr
 
 
-def prepare_data():
+def prepare_data(train, test):
 
-    train, test = read_data()
     train["DescScore"].fillna(0, inplace=True)
     train["DescMagnitude"].fillna(0, inplace=True)
     test["DescScore"].fillna(0, inplace=True)
     test["DescMagnitude"].fillna(0, inplace=True)
-    # as descscore and descmagnitude have been increase by 1, 1 is the older 0
-    # train["DescMagnitude"] = train["DescMagnitude"] + 1
-    # train["DescScore"] = train["DescScore"] + 1
-    # test["DescMagnitude"] = test["DescMagnitude"] + 1
-    # test["DescScore"] = test["DescScore"] + 1
-
-    train = label_encoder(train, ["RescuerID"])
-    test = label_encoder(test, ["RescuerID"])
+    train["Description"].fillna("none", inplace=True)
+    test["Description"].fillna("none", inplace=True)
+    enc = LabelEncoder()
+    train["RescuerID"] = enc.fit_transform(train["RescuerID"])
+    test["RescuerID"] = enc.fit_transform(test["RescuerID"])
+    train["DescLength"] = train["Description"].str.len()
+    test["DescLength"] = test["Description"].str.len()
     #train[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     #test[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     # train = conv_cat_variable(train)
@@ -79,9 +77,10 @@ def prepare_data():
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
-    #train_desc, test_desc = tfidf(train, test)
-    #train_x = pd.concat([train_x, train_desc], axis=1)
-    #test_x = pd.concat([test_x, test_desc], axis=1)
+    train_desc, test_desc = tfidf(train, test)
+    train_x = pd.concat([train_x, train_desc], axis=1)
+    test_x = pd.concat([test_x, test_desc], axis=1)
+    #train_x, test_x = scale_num_var(train_x, test_x)
     return train_x, train_y, test_x, test_id
 
 
@@ -92,6 +91,11 @@ def create_dict(file, idx, col):
     dct[0] = "Not Set"
     return dct
 
+def scale_num_var(train, test):
+    for col in Columns.ind_cont_columns.value:
+        train[col] = (train[col]-train[col].mean())/train[col].std()
+        test[col] = (test[col]-train[col].mean())/train[col].std()
+    return train, test
 
 def conv_cat_variable(df):
     dct1 = create_dict(Paths.base.value+"color_labels.csv", "ColorID", "ColorName")
@@ -115,4 +119,6 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
     train, test = read_data()
     #tfidf(train, test)
-    train_x, train_y, test_x, test_id = prepare_data()
+    train_x, train_y, test_x, test_id = prepare_data(train,test)
+
+    print(train_x.describe())
