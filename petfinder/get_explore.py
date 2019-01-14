@@ -117,13 +117,7 @@ def read_data():
     test = test.set_index("PetID").join(test_img.set_index("PetID")).reset_index()
     print(train.columns.values)
     train["Lbl_Dsc"].fillna("none",  inplace=True)
-    train[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", inplace=True)
-    train[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", inplace=True)
-    train[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", inplace=True)
     test["Lbl_Dsc"].fillna("none",  inplace=True)
-    test[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", inplace=True)
-    test[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", inplace=True)
-    test[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", inplace=True)
 
 
     return train, test
@@ -242,11 +236,11 @@ def get_img_meta(type, rc):
         i += 1
 
     df_imgs["Lbl_Dsc"] = df_imgs["Lbl_Dsc_1"] + " " + df_imgs["Lbl_Dsc_2"] + " " + df_imgs["Lbl_Dsc_3"]
-    df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
+    #df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
 
     df_imgs["Lbl_Dsc"].fillna("none", inplace=True)
     df_imgs.fillna(-1, inplace=True)
-
+    print(df_imgs.head())
     if os.path.isfile(fpath):
         pd.read_csv(fpath)
 
@@ -264,8 +258,11 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
-
     print(train.head())
+    x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
+    print(x.head())
+
+   # print(train.head())
     sys.exit()
     print(train.describe(include="all"))
     #print(train.values.reshape())
