@@ -90,21 +90,21 @@ def read_data():
     train = pd.read_csv(Paths.base.value+"train/train.csv")
     test = pd.read_csv(Paths.base.value+"test/test.csv")
     calc_anly = 0
-    if os.path.exists(Paths.base.value+"train_sentiment.csv"):
+    if os.path.exists(Paths.base.value+"train_sentiment.csv") and calc_anly == 0:
         train_snt = pd.read_csv(Paths.base.value + "train_sentiment.csv")
     else:
         train_snt = get_desc_anly("train", calc_anly)
-    if os.path.exists(Paths.base.value+"test_sentiment.csv"):
+    if os.path.exists(Paths.base.value+"test_sentiment.csv") and calc_anly == 0:
         train_snt = pd.read_csv(Paths.base.value + "test_sentiment.csv")
     else:
         test_snt = get_desc_anly("test", calc_anly)
 
     calc_img = 1
-    if os.path.exists(Paths.base.value+"train_metadata/train_metadata.csv"):
+    if os.path.exists(Paths.base.value+"train_metadata/train_metadata.csv") and calc_img == 0:
         train_img = pd.read_csv(Paths.base.value+"train_metadata/train_metadata.csv")
     else:
         train_img = get_img_meta("train", calc_img)
-    if os.path.exists(Paths.base.value+"test_metadata/test_metadata.csv"):
+    if os.path.exists(Paths.base.value+"test_metadata/test_metadata.csv")  and calc_img == 0:
         test_img = pd.read_csv(Paths.base.value+"test_metadata/test_metadata.csv")
     else:
         test_img = get_img_meta("test", calc_img)
@@ -115,7 +115,7 @@ def read_data():
 
     train = train.set_index("PetID").join(train_img.set_index("PetID")).reset_index()
     test = test.set_index("PetID").join(test_img.set_index("PetID")).reset_index()
-    print(train.columns.values)
+    #print(train.columns.values)
     train["Lbl_Dsc"].fillna("none",  inplace=True)
     test["Lbl_Dsc"].fillna("none",  inplace=True)
 
@@ -136,7 +136,7 @@ def get_desc_anly(type, rc):
     if rc == 1 or not(os.path.exists(fpath)):
         if os.path.exists(fpath):
             os.remove(fpath)
-
+        print("reparsing description sentiment")
         files = [f for f in sorted(os.listdir(path)) if (f.endswith('.json') & os.path.isfile(path+f))]
 
         df = pd.DataFrame(columns=["PetID", "DescScore", "DescMagnitude"])
@@ -164,8 +164,8 @@ def get_img_meta(type, rc):
     else:
         path = Paths.base.value + "test_metadata/"  # ../input/test_sentiment/
         fpath = Paths.base.value + "test_metadata/test_metadata.csv"
-
     if rc == 1 or not (os.path.exists(fpath)):
+        print("reparsing image metadata")
         if os.path.exists(fpath):
             os.remove(fpath)
 
@@ -181,7 +181,7 @@ def get_img_meta(type, rc):
             PetID = img[:-7]
             if (l_petid != PetID) & (l_petid != ""):
                 k += 1
-            print(i, PetID,k, img, (img[-6:-5]), l_petid)
+            #print(i, PetID,k, img, (img[-6:-5]), l_petid)
 
             with open(path + img, encoding="utf8") as json_data:
                 data = json.load(json_data)
