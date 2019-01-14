@@ -217,7 +217,7 @@ def get_img_meta(type, rc):
         pd.read_csv(fpath)
 
     df_imgs.to_csv(fpath, index=False)
-
+    return df_imgs
 
     return df_imgs
 
