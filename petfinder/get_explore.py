@@ -77,7 +77,8 @@ class Columns(Enum):
     img_cols_2 = ["Vertex_X_2", "Vertex_Y_2", "Bound_Conf_2", "Bound_Imp_Frac_2",
                 "RGBint_2", "Dom_Px_Fr_2", "Dom_Scr_2", "Lbl_Dsc_2", "Lbl_Scr_2"]
     img_cols_3 = ["Vertex_X_3", "Vertex_Y_3", "Bound_Conf_3", "Bound_Imp_Frac_3",
-                "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Dsc3", "Lbl_Scr_3"]
+                "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Dsc_3", "Lbl_Scr_3"]
+    img_ann_desc = ["Lbl_Dsc"]
     n_img_anl = 3
     n_iann_svdcomp = 10
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
@@ -148,16 +149,17 @@ def get_img_meta(type, rc):
             if os.path.exists(fpath):
                 os.remove(fpath)
 
-    df_imgs = pd.DataFrame(columns=Columns.iden_columns.value + Columns.img_cols_1.value + Columns.img_cols_2.value + Columns.img_cols_3.value)
+    df_imgs = pd.DataFrame(columns=Columns.iden_columns.value + Columns.img_cols_1.value + Columns.img_cols_2.value
+                                   + Columns.img_cols_3.value + Columns.img_ann_desc.value)
 
-    images = [f for f in os.listdir(path) if ((f.endswith('-1.json') or f.endswith('-2.json') or f.endswith('-3.json')) & os.path.isfile(path + f))]
+    images = [f for f in sorted(os.listdir(path)) if ((f.endswith('-1.json') or f.endswith('-2.json') or f.endswith('-3.json')) & os.path.isfile(path + f))]
 
     i = 0
     l_petid = ""
     k = 0
     for img in images:
         PetID = img[:-7]
-        if (l_petid != PetID) & (l_petid!=""):
+        if (l_petid != PetID) & (l_petid != ""):
             k += 1
         print(i, PetID,k, img, (img[-6:-5]), l_petid)
 
@@ -213,6 +215,9 @@ def get_img_meta(type, rc):
 
         i += 1
 
+    df_imgs["Lbl_Dsc"] = df_imgs["Lbl_Dsc_1"] + " " + df_imgs["Lbl_Dsc_2"] + " " + df_imgs["Lbl_Dsc_3"]
+    df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
+
     if os.path.isfile(fpath):
         pd.read_csv(fpath)
 
@@ -231,7 +236,7 @@ if __name__ == "__main__":
     #print(sys.platform)
     train, test = read_data()
 
-    print(get_img_meta("train", 1).head())
+    #print(get_img_meta("train", 1).head())
     print(get_img_meta("test", 1).head())
     sys.exit()
     print(train.describe(include="all"))
