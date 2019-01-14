@@ -117,13 +117,13 @@ def read_data():
     test = test.set_index("PetID").join(test_img.set_index("PetID")).reset_index()
     print(train.columns.values)
     train["Lbl_Dsc"].fillna("none",  inplace=True)
-    train[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", axis=1, inplace=True)
-    train[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", axis=1, inplace=True)
-    train[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", axis=1, inplace=True)
+    train[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", inplace=True)
+    train[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", inplace=True)
+    train[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", inplace=True)
     test["Lbl_Dsc"].fillna("none",  inplace=True)
-    test[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", axis=1, inplace=True)
-    test[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", axis=1, inplace=True)
-    test[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", axis=1, inplace=True)
+    test[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", inplace=True)
+    test[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", inplace=True)
+    test[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", inplace=True)
 
 
     return train, test
