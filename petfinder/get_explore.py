@@ -98,8 +98,33 @@ def read_data():
         train_snt = pd.read_csv(Paths.base.value + "test_sentiment.csv")
     else:
         test_snt = get_desc_anly("test", calc_anly)
+
+    calc_img = 0
+    if os.path.exists(Paths.base.value+"train_metadata/train_metadata.csv"):
+        train_img = pd.read_csv(Paths.base.value+"train_metadata/train_metadata.csv")
+    else:
+        train_img = get_img_meta("train", calc_img)
+    if os.path.exists(Paths.base.value+"test_metadata/test_metadata.csv"):
+        test_img = pd.read_csv(Paths.base.value+"test_metadata/test_metadata.csv")
+    else:
+        test_img = get_img_meta("test", calc_img)
+
+
     train = train.set_index("PetID").join(train_snt.set_index("PetID")).reset_index()
     test = test.set_index("PetID").join(test_snt.set_index("PetID")).reset_index()
+
+    train = train.set_index("PetID").join(train_img.set_index("PetID")).reset_index()
+    test = test.set_index("PetID").join(test_img.set_index("PetID")).reset_index()
+    train["Lbl_Desc"].fillna("none", axis=1, inplace=True)
+    train[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", axis=1, inplace=True)
+    train[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", axis=1, inplace=True)
+    train[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", axis=1, inplace=True)
+    test["Lbl_Desc"].fillna("none", axis=1, inplace=True)
+    test[Columns.img_cols_1.value.remove("Lbl_Dsc_1")].fillna("none", axis=1, inplace=True)
+    test[Columns.img_cols_2.value.remove("Lbl_Dsc_2")].fillna("none", axis=1, inplace=True)
+    test[Columns.img_cols_3.value.remove("Lbl_Dsc_3")].fillna("none", axis=1, inplace=True)
+
+
     return train, test
 
 
@@ -218,6 +243,9 @@ def get_img_meta(type, rc):
     df_imgs["Lbl_Dsc"] = df_imgs["Lbl_Dsc_1"] + " " + df_imgs["Lbl_Dsc_2"] + " " + df_imgs["Lbl_Dsc_3"]
     df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
 
+    df_imgs["Lbl_Dsc"].fillna("none", inplace=True)
+    df_imgs.fillna(-1, inplace=True)
+
     if os.path.isfile(fpath):
         pd.read_csv(fpath)
 
@@ -236,7 +264,7 @@ if __name__ == "__main__":
     #print(sys.platform)
     train, test = read_data()
 
-    #print(get_img_meta("train", 1).head())
+    print(get_img_meta("train", 1).head())
     print(get_img_meta("test", 1).head())
     sys.exit()
     print(train.describe(include="all"))

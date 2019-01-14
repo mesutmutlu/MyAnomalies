@@ -13,15 +13,7 @@ from petfinder.get_explore import read_data
 from sklearn.preprocessing import LabelEncoder
 from enum import Enum
 from petfinder.get_explore import Columns, Paths
-from petfinder.tools import tfidf, label_encoder
-
-
-def fill_na(arr, cols, val):
-    for col in cols:
-        arr[col].fillna(val, inplace=True)
-    return arr
-
-
+from petfinder.tools import tfidf, label_encoder, scale_num_var
 
 
 def prepare_data(train, test):
@@ -46,11 +38,16 @@ def prepare_data(train, test):
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
-    train_desc, test_desc = tfidf(train, test, Columns.n_desc_svdcomp.value)
+    train_desc, test_desc = tfidf(train, test, "Description", 120)
     train_x = pd.concat([train_x, train_desc], axis=1)
     test_x = pd.concat([test_x, test_desc], axis=1)
+    train_lbl, test_lbl = tfidf(train, test, "Lbl_Dsc", 10)
+    train_x2 = train_x.set_index("PetID").join(train_lbl.set_index("PetID"), how="left").reset_index()
+    test_x2 = test_x.set_index("PetID").join(test_lbl.set_index("PetID"), how="left").reset_index()
+    train_x2.drop(["Lbl_Dsc"], axis=1, inplace=True)
+    test_x2.drop(["Lbl_Dsc"], axis=1, inplace=True)
     #train_x, test_x = scale_num_var(train_x, test_x)
-    return train_x, train_y, test_x, test_id
+    return train_x2, train_y, test_x2, test_id
 
 
 def create_dict(file, idx, col):
@@ -60,26 +57,6 @@ def create_dict(file, idx, col):
     dct[0] = "Not Set"
     return dct
 
-def scale_num_var(train, test):
-    for col in Columns.ind_cont_columns.value:
-        train[col] = (train[col]-train[col].mean())/train[col].std()
-        test[col] = (test[col]-train[col].mean())/train[col].std()
-    return train, test
-
-def conv_cat_variable(df):
-    dct1 = create_dict(Paths.base.value+"color_labels.csv", "ColorID", "ColorName")
-    df["Color1"] = df["Color1"].map(dct1)
-    df["Color2"] = df["Color2"].map(dct1)
-    df["Color3"] = df["Color3"].map(dct1)
-    dct2 = create_dict(Paths.base.value + "breed_labels.csv", "BreedID", "BreedName")
-    df["Breed1"] = df["Breed1"].map(dct2)
-    df["Breed2"] = df["Breed2"].map(dct2)
-    dct3 = create_dict(Paths.base.value + "state_labels.csv", "StateID", "StateName")
-    df["State"] = df["State"].map(dct3)
-    # dict for type
-    dct4 = {1: "Dog", 2: "Cat"}
-    df["Type"] = df["Type"].map(dct4)
-    return df
 
 if __name__ == "__main__":
 
@@ -90,4 +67,4 @@ if __name__ == "__main__":
     #tfidf(train, test)
     train_x, train_y, test_x, test_id = prepare_data(train,test)
 
-    print(train_x.describe())
+    print(train_x.head())
