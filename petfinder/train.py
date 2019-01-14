@@ -132,11 +132,7 @@ def iterate_by_randomsearch(train_x, train_y):
               #'feature_fraction': sp.stats.uniform(0.4, 0.9),
               #'lambda_l1': sp.stats.randint(0,45),
               #'objective': 'multiclass',
-                                "n_jobs":[-1],
-                                "silent":[False]
-                                } )
-
-
+                                "n_jobs":[-1],} )
     ]
 
     df = pd.DataFrame(columns=['alg', 'best_estimator', 'perf', 'est','rank','mean','std', 'parameters'])
@@ -147,7 +143,7 @@ def iterate_by_randomsearch(train_x, train_y):
         print(type(clf[0]).__name__, "started at", datetime.now())
         n_iter=10
         kappa_scorer = make_scorer(cohen_kappa_score, weights="quadratic")
-        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], cv=folds, scoring=kappa_scorer, n_jobs = 2)
+        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], cv=folds, scoring=kappa_scorer, n_jobs=2)
         start = time()
         random_search.fit(train_x, train_y)
 
@@ -169,27 +165,6 @@ def iterate_by_randomsearch(train_x, train_y):
 
     return clfs, means
 
-
-
-class DummyEstimator(BaseEstimator):
-    def fit(self): pass
-    def score(self): pass
-
-
-def randomsearchpipeline(train_x, train_y):
-    classifiers = [
-        {"clf" : [AdaBoostClassifier()], "n_estimators": sp.stats.randint(25, 100)},
-        {"clf" : [BaggingClassifier()],"n_estimators": sp.stats.randint(25, 100),
-                                              "max_features": sp.stats.randint(1, 7),
-                                              "bootstrap": [True, False],
-                                              "bootstrap_features": [True, False],
-                                                 }]
-
-    pipe = Pipeline([("clf", DummyEstimator())])
-    random_search = RandomizedSearchCV(pipe, classifiers,
-                                           n_iter=2, cv=5)
-    random_search.fit(train_x.values, train_y.values.ravel())
-    return random_search
 
 def voting_predict(clfs, mean, train_x, train_y, test_x, test_id):
 
