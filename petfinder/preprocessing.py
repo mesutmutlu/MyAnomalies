@@ -22,7 +22,7 @@ def fill_na(arr, cols, val):
         arr[col].fillna(val, inplace=True)
     return arr
 
-def tfidf(train , test):
+def tfidf(train , test, n_svdcomp, n_iann_svdcomp):
     train_desc = train.Description
     test_desc = test.Description
 
@@ -41,9 +41,31 @@ def tfidf(train , test):
     #print(svd.explained_variance_ratio_.sum())
     #print(svd.explained_variance_ratio_)
     X = svd.transform(X)
-    train_desc = pd.DataFrame(X, columns=['svd_{}'.format(i) for i in range(120)])
+    train_desc = pd.DataFrame(X, columns=Columns.desc_cols.value)
     X_test = svd.transform(X_test)
-    test_desc = pd.DataFrame(X_test, columns=['svd_{}'.format(i) for i in range(120)])
+    test_desc = pd.DataFrame(X_test, columns=Columns.desc_cols.value)
+
+    train_desc = train.Description
+    test_desc = test.Description
+
+    tfv = TfidfVectorizer(min_df=2, max_features=None,
+                          strip_accents='unicode', analyzer='word', token_pattern=r'(?u)\b\w+\b',
+                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1,
+                          )
+
+    # Fit TFIDF
+    tfv.fit(list(train_desc))
+    X = tfv.transform(train_desc)
+    X_test = tfv.transform(test_desc)
+
+    svd = TruncatedSVD(n_components=120)
+    svd.fit(X)
+    # print(svd.explained_variance_ratio_.sum())
+    # print(svd.explained_variance_ratio_)
+    X = svd.transform(X)
+    train_desc = pd.DataFrame(X, columns=Columns.desc_cols.value)
+    X_test = svd.transform(X_test)
+    test_desc = pd.DataFrame(X_test, columns=Columns.desc_cols.value)
     return train_desc, test_desc
 
 def label_encoder(arr, cols):
@@ -77,7 +99,7 @@ def prepare_data(train, test):
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
     test_id = test[Columns.iden_columns.value]
-    train_desc, test_desc = tfidf(train, test)
+    train_desc, test_desc = tfidf(train, test, Columns.n_desc_svdcomp.value)
     train_x = pd.concat([train_x, train_desc], axis=1)
     test_x = pd.concat([test_x, test_desc], axis=1)
     #train_x, test_x = scale_num_var(train_x, test_x)

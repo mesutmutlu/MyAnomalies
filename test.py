@@ -1,5 +1,11 @@
 from scipy.optimize import minimize, rosen, rosen_der
 
+from sklearn.feature_extraction import stop_words
+
+
+from nltk.corpus import stopwords
+
+
 if __name__ == "__main__":
 
     x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
@@ -13,3 +19,5 @@ if __name__ == "__main__":
     print(r, res.x)
 
     print(res)
+
+    print(stopwords.words('chiniese'))

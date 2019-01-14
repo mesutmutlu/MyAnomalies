@@ -70,7 +70,18 @@ class Columns(Enum):
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
-    desc_cols = ["svd_" + str(i) for i in range(120)]
+    n_desc_svdcomp = 120
+    desc_cols = ["desc_svd_" + str(i) for i in range(n_desc_svdcomp)]
+    img_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
+                "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Dsc_1", "Lbl_Scr_1",]
+    img_cols_2 = ["Vertex_X_2", "Vertex_Y_2", "Bound_Conf_2", "Bound_Imp_Frac_2",
+                "RGBint_2", "Dom_Px_Fr_2", "Dom_Scr_2", "Lbl_Dsc_2", "Lbl_Scr_2"]
+    img_cols_3 = ["Vertex_X_3", "Vertex_Y_3", "Bound_Conf_3", "Bound_Imp_Frac_3",
+                "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Dsc3", "Lbl_Scr_3"]
+    n_img_anl = 3
+    n_iann_svdcomp = 10
+    iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
+
 
 
 
@@ -105,7 +116,7 @@ def get_desc_anly(type, rc):
         if os.path.exists(fpath):
             os.remove(fpath)
 
-        files = [f for f in os.listdir(path) if (f.endswith('.json') & os.path.isfile(path+f))]
+        files = [f for f in sorted(os.listdir(path)) if (f.endswith('.json') & os.path.isfile(path+f))]
 
         df = pd.DataFrame(columns=["PetID", "DescScore", "DescMagnitude"])
         i = 0
@@ -124,6 +135,93 @@ def get_desc_anly(type, rc):
     return pd.read_csv(fpath)
 
 
+def get_img_meta(type, rc):
+
+    if type == "train":
+        path = Paths.base.value + "train_metadata/"  # ../input/train_sentiment/
+        fpath = Paths.base.value + "train_metadata/train_metadata.csv"
+    else:
+        path = Paths.base.value + "test_metadata/"  # ../input/test_sentiment/
+        fpath = Paths.base.value + "test_metadata/test_metadata.csv"
+
+        if rc == 1 or not (os.path.exists(fpath)):
+            if os.path.exists(fpath):
+                os.remove(fpath)
+
+    df_imgs = pd.DataFrame(columns=Columns.iden_columns.value + Columns.img_cols_1.value + Columns.img_cols_2.value + Columns.img_cols_3.value)
+
+    images = [f for f in os.listdir(path) if ((f.endswith('-1.json') or f.endswith('-2.json') or f.endswith('-3.json')) & os.path.isfile(path + f))]
+
+    i = 0
+    l_petid = ""
+    k = 0
+    for img in images:
+        PetID = img[:-7]
+        if (l_petid != PetID) & (l_petid!=""):
+            k += 1
+        print(i, PetID,k, img, (img[-6:-5]), l_petid)
+
+        with open(path + img, encoding="utf8") as json_data:
+            data = json.load(json_data)
+        vertex_x = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x',-1)
+        vertex_y = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y',-1)
+        bounding_confidence = data['cropHintsAnnotation']['cropHints'][0].get('confidence',-1)
+        bounding_importance_frac = data['cropHintsAnnotation']['cropHints'][0].get('importanceFraction', -1)
+        dominant_blue = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('blue', 255)
+        dominant_green = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('green', 255)
+        dominant_red = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('red', 255)
+        RGBint = (dominant_red << 16) + (dominant_green << 8) + dominant_blue
+        dominant_pixel_frac = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('pixelFraction', -1)
+        dominant_score = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('score', -1)
+
+        if data.get('labelAnnotations'):
+            label_description = ""
+            label_score = 0
+            j = 1
+            for ann in data.get('labelAnnotations'):
+                if ann.get('score', 0) >= 0.80:
+                    label_score = (ann.get('score', 0) + label_score) / j
+                    label_description = label_description + " " + ann.get("description", "nothing")
+                    j += 1
+        else:
+            label_description = 'nothing'
+            label_score = -1
+
+        if img[-6:-5] == "1":
+            df_imgs.loc[k, Columns.iden_columns.value + Columns.img_cols_1.value] = [PetID,vertex_x, vertex_y, bounding_confidence,
+                                                                                     bounding_importance_frac, RGBint,
+                                                                                    dominant_pixel_frac, dominant_score, label_description,label_score]
+
+        if img[-6:-5] == "2":
+            df_imgs.loc[k, Columns.img_cols_2.value] = [vertex_x, vertex_y, bounding_confidence,
+                                                        bounding_importance_frac, RGBint,
+                                                        dominant_pixel_frac, dominant_score, label_description,
+                                                        label_score]
+
+        if img[-6:-5] == "3":
+            df_imgs.loc[k, Columns.img_cols_3.value] = [vertex_x, vertex_y, bounding_confidence,
+                                                        bounding_importance_frac, RGBint,
+                                                        dominant_pixel_frac, dominant_score, label_description,
+                                                            label_score]
+
+
+        if (i == 1):
+            l_petid = PetID
+
+        if (l_petid != PetID):
+            l_petid = PetID
+
+        i += 1
+
+    if os.path.isfile(fpath):
+        pd.read_csv(fpath)
+
+    df_imgs.to_csv(fpath, index=False)
+
+
+    return df_imgs
+
+
 if __name__ == "__main__":
 
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
@@ -134,7 +232,8 @@ if __name__ == "__main__":
     #print(sys.platform)
     train, test = read_data()
 
-    print(type(train["Description"].str.len().values))
+    print(get_img_meta("train", 1).head())
+    print(get_img_meta("test", 1).head())
     sys.exit()
     print(train.describe(include="all"))
     #print(train.values.reshape())
