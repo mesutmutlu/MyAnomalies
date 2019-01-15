@@ -72,13 +72,16 @@ class Columns(Enum):
     dep_columns = ["AdoptionSpeed"]
     n_desc_svdcomp = 120
     desc_cols = ["desc_svd_" + str(i) for i in range(n_desc_svdcomp)]
-    img_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
-                "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Dsc_1", "Lbl_Scr_1",]
-    img_cols_2 = ["Vertex_X_2", "Vertex_Y_2", "Bound_Conf_2", "Bound_Imp_Frac_2",
-                "RGBint_2", "Dom_Px_Fr_2", "Dom_Scr_2", "Lbl_Dsc_2", "Lbl_Scr_2"]
-    img_cols_3 = ["Vertex_X_3", "Vertex_Y_3", "Bound_Conf_3", "Bound_Imp_Frac_3",
-                "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Dsc_3", "Lbl_Scr_3"]
-    img_ann_desc = ["Lbl_Dsc"]
+    img_num_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
+                "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Scr_1",]
+    img_num_cols_2 = ["Vertex_X_2", "Vertex_Y_2", "Bound_Conf_2", "Bound_Imp_Frac_2",
+                "RGBint_2", "Dom_Px_Fr_2", "Dom_Scr_2", "Lbl_Scr_2"]
+    img_num_cols_3 = ["Vertex_X_3", "Vertex_Y_3", "Bound_Conf_3", "Bound_Imp_Frac_3",
+                "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Scr_3"]
+    img_lbl_cols_1 = ["Lbl_Img_1"]
+    img_lbl_cols_2 = ["Lbl_Img_2"]
+    img_lbl_cols_3 = ["Lbl_Img_3"]
+    img_lbl_col = ["Lbl_Dsc"]
     n_img_anl = 3
     n_iann_svdcomp = 10
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
@@ -99,7 +102,7 @@ def read_data():
     else:
         test_snt = get_desc_anly("test", calc_anly)
 
-    calc_img = 1
+    calc_img = 0
     if os.path.exists(Paths.base.value+"train_metadata/train_metadata.csv") and calc_img == 0:
         train_img = pd.read_csv(Paths.base.value+"train_metadata/train_metadata.csv")
     else:
@@ -164,13 +167,16 @@ def get_img_meta(type, rc):
     else:
         path = Paths.base.value + "test_metadata/"  # ../input/test_sentiment/
         fpath = Paths.base.value + "test_metadata/test_metadata.csv"
+
+    df_imgs = pd.DataFrame(
+        columns=Columns.iden_columns.value + Columns.img_num_cols_1.value + Columns.img_lbl_cols_1.value
+                + Columns.img_num_cols_2.value + Columns.img_lbl_cols_2.value
+                + Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value + Columns.img_lbl_col.value)
+
     if rc == 1 or not (os.path.exists(fpath)):
         print("reparsing image metadata")
         if os.path.exists(fpath):
             os.remove(fpath)
-
-        df_imgs = pd.DataFrame(columns=Columns.iden_columns.value + Columns.img_cols_1.value + Columns.img_cols_2.value
-                                       + Columns.img_cols_3.value + Columns.img_ann_desc.value)
 
         images = [f for f in sorted(os.listdir(path)) if ((f.endswith('-1.json') or f.endswith('-2.json') or f.endswith('-3.json')) & os.path.isfile(path + f))]
 
@@ -210,21 +216,19 @@ def get_img_meta(type, rc):
                 label_score = -1
 
             if img[-6:-5] == "1":
-                df_imgs.loc[k, Columns.iden_columns.value + Columns.img_cols_1.value] = [PetID,vertex_x, vertex_y, bounding_confidence,
-                                                                                         bounding_importance_frac, RGBint,
-                                                                                        dominant_pixel_frac, dominant_score, label_description,label_score]
+                df_imgs.loc[k, Columns.iden_columns.value + Columns.img_num_cols_1.value + Columns.img_lbl_cols_1.value] = \
+                    [PetID,vertex_x, vertex_y, bounding_confidence,bounding_importance_frac, RGBint,
+                                dominant_pixel_frac, dominant_score, label_score, label_description]
 
             if img[-6:-5] == "2":
-                df_imgs.loc[k, Columns.img_cols_2.value] = [vertex_x, vertex_y, bounding_confidence,
-                                                            bounding_importance_frac, RGBint,
-                                                            dominant_pixel_frac, dominant_score, label_description,
-                                                            label_score]
+                df_imgs.loc[k, Columns.img_num_cols_2.value + Columns.img_lbl_cols_2.value] =  \
+                    [vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
+                            dominant_pixel_frac, dominant_score, label_score, label_description]
 
             if img[-6:-5] == "3":
-                df_imgs.loc[k, Columns.img_cols_3.value] = [vertex_x, vertex_y, bounding_confidence,
-                                                            bounding_importance_frac, RGBint,
-                                                            dominant_pixel_frac, dominant_score, label_description,
-                                                                label_score]
+                df_imgs.loc[k, Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value] = \
+                    [vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
+                            dominant_pixel_frac, dominant_score, label_score, label_description]
 
 
             if (i == 1):
@@ -235,10 +239,12 @@ def get_img_meta(type, rc):
 
             i += 1
 
-        df_imgs["Lbl_Dsc"] = df_imgs["Lbl_Dsc_1"] + " " + df_imgs["Lbl_Dsc_2"] + " " + df_imgs["Lbl_Dsc_3"]
+        df_imgs[Columns.img_lbl_col.value[0]] = df_imgs[Columns.img_lbl_cols_1.value[0]] \
+                                                + " " + df_imgs[Columns.img_lbl_cols_2.value[0]] \
+                                                + " " + df_imgs[Columns.img_lbl_cols_3.value[0]]
         #df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
 
-        df_imgs["Lbl_Dsc"].fillna("none", inplace=True)
+        df_imgs[Columns.img_lbl_col.value[0]].fillna("none", inplace=True)
         df_imgs.fillna(-1, inplace=True)
         print(df_imgs.head())
         if os.path.isfile(fpath):
@@ -258,9 +264,10 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
-    print(train.head())
-    x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
-    print(x.head())
+    #print(train.head())
+    #x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
+    #print(x.head())
+    get_img_meta(train, 1)
 
    # print(train.head())
     sys.exit()

@@ -6,9 +6,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 
-def tfidf(train , test, col, n_comp):
-    train_desc = train[col]
-    test_desc = test[col]
+def tfidf(train , test, col, n_comp, cols):
+    print("starting tfidf for train and test set")
+    train_desc = train[col].fillna("none")
+    test_desc = test[col].fillna("none")
 
     tfv = TfidfVectorizer(min_df=2, max_features=None,
                           strip_accents='unicode', analyzer='word', token_pattern=r'(?u)\b\w+\b',
@@ -25,9 +26,9 @@ def tfidf(train , test, col, n_comp):
     #print(svd.explained_variance_ratio_.sum())
     #print(svd.explained_variance_ratio_)
     X = svd.transform(X)
-    train_desc = pd.DataFrame(X, columns=Columns.desc_cols.value)
+    train_desc = pd.DataFrame(X, columns=cols)
     X_test = svd.transform(X_test)
-    test_desc = pd.DataFrame(X_test, columns=Columns.desc_cols.value)
+    test_desc = pd.DataFrame(X_test, columns=cols)
 
     train_desc = train.Description
     test_desc = test.Description
@@ -47,9 +48,9 @@ def tfidf(train , test, col, n_comp):
     # print(svd.explained_variance_ratio_.sum())
     # print(svd.explained_variance_ratio_)
     X = svd.transform(X)
-    train_desc = pd.DataFrame(X, columns=Columns.desc_cols.value)
+    train_desc = pd.DataFrame(X, columns=cols)
     X_test = svd.transform(X_test)
-    test_desc = pd.DataFrame(X_test, columns=Columns.desc_cols.value)
+    test_desc = pd.DataFrame(X_test, columns=cols)
     return train_desc, test_desc
 
 

@@ -17,13 +17,14 @@ from petfinder.tools import tfidf, label_encoder, scale_num_var
 
 
 def prepare_data(train, test):
-
+    print("preparing final dataset")
     train["DescScore"].fillna(0, inplace=True)
     train["DescMagnitude"].fillna(0, inplace=True)
     test["DescScore"].fillna(0, inplace=True)
     test["DescMagnitude"].fillna(0, inplace=True)
     train["Description"].fillna("none", inplace=True)
     test["Description"].fillna("none", inplace=True)
+    print("rescuerid encoding")
     enc = LabelEncoder()
     train["RescuerID"] = enc.fit_transform(train["RescuerID"])
     test["RescuerID"] = enc.fit_transform(test["RescuerID"])
@@ -33,21 +34,25 @@ def prepare_data(train, test):
     #test[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     # train = conv_cat_variable(train)
     # test = conv_cat_variable(test)
-    train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
+    train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value +
+                    Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value]
     #print(train_x)
     train_y = train[Columns.dep_columns.value]
-    test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value]
+    test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value +
+                  Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value]
     test_id = test[Columns.iden_columns.value]
-    train_desc, test_desc = tfidf(train, test, "Description", 120)
+    print("description tfidf")
+    train_desc, test_desc = tfidf(train, test, "Description", 120, Columns.desc_cols.value)
     train_x = pd.concat([train_x, train_desc], axis=1)
     test_x = pd.concat([test_x, test_desc], axis=1)
-    train_lbl, test_lbl = tfidf(train, test, "Lbl_Dsc", 10)
-    train_x2 = train_x.set_index("PetID").join(train_lbl.set_index("PetID"), how="left").reset_index()
-    test_x2 = test_x.set_index("PetID").join(test_lbl.set_index("PetID"), how="left").reset_index()
-    train_x2.drop(["Lbl_Dsc"], axis=1, inplace=True)
-    test_x2.drop(["Lbl_Dsc"], axis=1, inplace=True)
+    print("image annotation tfidf")
+    train_lbl, test_lbl = tfidf(train, test, Columns.img_lbl_col.value[0], 10, Columns.iann_cols.value)
+    train_x = pd.concat([train_x, train_lbl], axis=1)
+    test_x = pd.concat([test_x, test_lbl], axis=1)
+    #train_x.drop(["Lbl_Dsc_3", "Lbl_Dsc_2", "Lbl_Dsc_1"], axis=1, inplace=True)
+    #test_x.drop(["Lbl_Dsc_3", "Lbl_Dsc_2", "Lbl_Dsc_1"], axis=1, inplace=True)
     #train_x, test_x = scale_num_var(train_x, test_x)
-    return train_x2, train_y, test_x2, test_id
+    return train_x, train_y, test_x, test_id
 
 
 def create_dict(file, idx, col):
