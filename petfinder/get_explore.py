@@ -264,6 +264,8 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
+    print(train.iloc[[1,3,5]])
+    sys.exit()
     #print(train.head())
     #x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
     #print(x.head())

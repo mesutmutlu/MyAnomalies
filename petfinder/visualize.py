@@ -12,7 +12,7 @@ import math
 from petfinder.get_explore import read_data
 from scipy.stats import ttest_rel
 from petfinder.get_explore import Columns
-from petfinder.preprocessing import conv_cat_variable
+from petfinder.tools import conv_cat_variable
 from petfinder.preprocessing import prepare_data
 import matplotlib as mpl
 from pylab import rcParams
@@ -124,7 +124,15 @@ if __name__ == "__main__":
 
     train, test = read_data()
 
+    #ax1 = sns.barplot(x="AdoptionSpeed", data=train, hue="Type")
+    plt.show()
+    print(train.groupby(["Type"])["AdoptionSpeed"].value_counts(normalize=True).rename('percentage').mul(100).reset_index())
+
+    sys.exit()
+
     x_train, y_train, x_test, id_test = prepare_data(train, test)
+
+
 
     cols = Columns.ind_num_cat_columns.value
     if "RescuerID" in cols:

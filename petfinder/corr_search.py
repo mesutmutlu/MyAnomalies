@@ -93,17 +93,18 @@ def correlation_ratio(categories, measurements):
     return eta
 
 
-def by_correlation_ratio(train, cat_cols, num_cols):
+def by_correlation_ratio(df, dep_col, cols):
     # for mix correlation
-    theilu = pd.DataFrame(index=cat_cols, columns=train[num_cols].columns)
-    columns = train[num_cols].columns
-    for j in range(0, len(columns)):
-        u = correlation_ratio(train[cat_cols[0]].tolist(), train[columns[j]].tolist())
-        theilu.loc[:, columns[j]] = u
-    theilu.fillna(value=np.nan, inplace=True)
-    plt.figure(figsize=(20, 1))
-    sns.heatmap(theilu, annot=True, fmt='.2f')
-    plt.show()
+    cr = pd.DataFrame( columns=cols)
+    i = 0
+    for c in cols:
+        eta = correlation_ratio(df[dep_col], df[c])
+        cr.loc[i, c] = eta
+    i = i + 1
+    cr.fillna(value=np.nan, inplace=True)
+    # plt.figure(figsize=(20, 1))
+    return cr
+
 
 
 def by_skchi(indep, dep):
@@ -272,7 +273,8 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    x_train, y_train, x_test, id_test = prepare_data()
+    train, test = read_data()
+    x_train, y_train, x_test, id_test = prepare_data(train, test)
     #x_train.drop(["RescuerID", "DescScore", "DescMagnitude"], axis=1, inplace=True)
     #x_train.drop(Columns.desc_cols.value, axis=1, inplace=True)
     #print(x_train[Columns.ind_num_cat_columns.value],)
@@ -288,6 +290,9 @@ if __name__ == "__main__":
     # print(flights)
 
     # check correlation for numerical values
+    cr = by_correlation_ratio(pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
+    print(cr)
+    sys.exit()
     ds = pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1)
     print(ds)
     print(ds.corr())
