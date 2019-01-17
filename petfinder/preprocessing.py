@@ -17,6 +17,16 @@ from petfinder.tools import tfidf, label_encoder, scale_num_var
 
 
 def prepare_data(train, test):
+    print(train.loc[train["Name"].isnull()])
+    train["NameLength"] = 0
+    train["NameLength"] = train["Name"].str.len()
+    train["DescLength"] = 0
+    #train.loc[train["Description"].isnull()]["DescLength"] = 0
+    #test.loc[test["Name"].isnull()]["NameLength"] = 0
+    #test.loc[test["Description"].isnull()]["DescLength"] = 0
+    print(train["NameLength"])
+    print(train.describe(include="all"))
+    sys.exit()
     print("preparing final dataset")
     train["DescScore"].fillna(0, inplace=True)
     train["DescMagnitude"].fillna(0, inplace=True)
@@ -30,10 +40,13 @@ def prepare_data(train, test):
     test["RescuerID"] = enc.fit_transform(test["RescuerID"])
     train["DescLength"] = train["Description"].str.len()
     test["DescLength"] = test["Description"].str.len()
+    train["NameLength"] = train["Name"].str.len()
+    train["NameLength"] = test["Name"].str.len()
     #train[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     #test[Columns.ind_num_cat_columns.value] = train[Columns.ind_num_cat_columns.value].astype('category')
     # train = conv_cat_variable(train)
     # test = conv_cat_variable(test)
+    #sys.exit()
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value +
                     Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value]
     #print(train_x)
@@ -71,5 +84,7 @@ if __name__ == "__main__":
     train, test = read_data()
     #tfidf(train, test)
     train_x, train_y, test_x, test_id = prepare_data(train,test)
+    print(train_x.info())
+    print(test_x.info())
 
-    print(train_x.head())
+    #print(train_x.head())

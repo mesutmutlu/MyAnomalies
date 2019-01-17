@@ -54,6 +54,27 @@ def tfidf(train , test, col, n_comp, cols):
     return train_desc, test_desc
 
 
+def tfidf_2(train, n_comp, out_cols):
+    print("starting tfidf")
+
+    tfv = TfidfVectorizer(min_df=2, max_features=None,
+                          strip_accents='unicode', analyzer='word', token_pattern=r'(?u)\b\w+\b',
+                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1)
+
+    # Fit TFIDF
+    tfv.fit(list(train))
+    X = tfv.transform(train)
+
+    svd = TruncatedSVD(n_components=n_comp)
+    svd.fit(X)
+    # print(svd.explained_variance_ratio_.sum())
+    # print(svd.explained_variance_ratio_)
+    X = svd.transform(X)
+    df_svd = pd.DataFrame(X, columns=out_cols)
+
+    return df_svd
+
+
 def label_encoder(arr, cols):
     enc = LabelEncoder()
     for col in cols:
@@ -75,18 +96,3 @@ def fill_na(arr, cols, val):
         arr[col].fillna(val, inplace=True)
     return arr
 
-
-def conv_cat_variable(df):
-    dct1 = create_dict(Paths.base.value+"color_labels.csv", "ColorID", "ColorName")
-    df["Color1"] = df["Color1"].map(dct1)
-    df["Color2"] = df["Color2"].map(dct1)
-    df["Color3"] = df["Color3"].map(dct1)
-    dct2 = create_dict(Paths.base.value + "breed_labels.csv", "BreedID", "BreedName")
-    df["Breed1"] = df["Breed1"].map(dct2)
-    df["Breed2"] = df["Breed2"].map(dct2)
-    dct3 = create_dict(Paths.base.value + "state_labels.csv", "StateID", "StateName")
-    df["State"] = df["State"].map(dct3)
-    # dict for type
-    dct4 = {1: "Dog", 2: "Cat"}
-    df["Type"] = df["Type"].map(dct4)
-    return df

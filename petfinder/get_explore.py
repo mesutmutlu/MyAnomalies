@@ -63,7 +63,7 @@ class Paths(Enum):
 
 class Columns(Enum):
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity",
-                        "DescScore", "DescMagnitude", "DescLength"]
+                        "DescScore", "DescMagnitude", "DescLength", "NameLegth"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
                            "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID",
                            "FurLength", "MaturitySize"]
@@ -92,114 +92,110 @@ class Columns(Enum):
 def read_data():
     train = pd.read_csv(Paths.base.value+"train/train.csv")
     test = pd.read_csv(Paths.base.value+"test/test.csv")
-    calc_anly = 0
-    if os.path.exists(Paths.base.value+"train_sentiment.csv") and calc_anly == 0:
-        train_snt = pd.read_csv(Paths.base.value + "train_sentiment.csv")
-    else:
-        train_snt = get_desc_anly("train", calc_anly)
-    if os.path.exists(Paths.base.value+"test_sentiment.csv") and calc_anly == 0:
-        train_snt = pd.read_csv(Paths.base.value + "test_sentiment.csv")
-    else:
-        test_snt = get_desc_anly("test", calc_anly)
 
-    calc_img = 0
-    if os.path.exists(Paths.base.value+"train_metadata/train_metadata.csv") and calc_img == 0:
-        train_img = pd.read_csv(Paths.base.value+"train_metadata/train_metadata.csv")
-    else:
-        train_img = get_img_meta("train", calc_img)
-    if os.path.exists(Paths.base.value+"test_metadata/test_metadata.csv")  and calc_img == 0:
-        test_img = pd.read_csv(Paths.base.value+"test_metadata/test_metadata.csv")
-    else:
-        test_img = get_img_meta("test", calc_img)
-
-
+    rc_snt = 0
+    train_snt = get_desc_anly("train", rc_snt)
+    test_snt = get_desc_anly("test", rc_snt)
     train = train.set_index("PetID").join(train_snt.set_index("PetID")).reset_index()
     test = test.set_index("PetID").join(test_snt.set_index("PetID")).reset_index()
 
-    train = train.set_index("PetID").join(train_img.set_index("PetID")).reset_index()
-    test = test.set_index("PetID").join(test_img.set_index("PetID")).reset_index()
+    rc_img = 0
+    train_metadata_1 = get_img_meta("train", "1", rc_img)
+    train_metadata_2 = get_img_meta("train", "2", rc_img)
+    train_metadata_3 = get_img_meta("train", "3", rc_img)
+    test_metadata_1 = get_img_meta("test", "1", rc_img)
+    test_metadata_2 = get_img_meta("test", "2", rc_img)
+    test_metadata_3 = get_img_meta("test", "3", rc_img)
+
+    train_metadata = train_metadata_1.set_index("PetID").join(train_metadata_2.set_index("PetID")).join(
+        train_metadata_3.set_index("PetID")).reset_index()
+    test_metadata = test_metadata_1.set_index("PetID").join(test_metadata_2.set_index("PetID")).join(
+        test_metadata_3.set_index("PetID")).reset_index()
+
+    train_metadata["Lbl_Dsc"] = train_metadata["Lbl_Img_1"] + train_metadata["Lbl_Img_2"] + train_metadata["Lbl_Img_3"]
+    test_metadata["Lbl_Dsc"] = test_metadata["Lbl_Img_1"] + test_metadata["Lbl_Img_2"] + test_metadata["Lbl_Img_3"]
     #print(train.columns.values)
-    train["Lbl_Dsc"].fillna("none",  inplace=True)
-    test["Lbl_Dsc"].fillna("none",  inplace=True)
+    #train["Lbl_Dsc"].fillna("none",  inplace=True)
+    #test["Lbl_Dsc"].fillna("none",  inplace=True)
+
+    train_df = train.set_index("PetID").join(train_metadata.set_index("PetID")).reset_index()
+    test_df = test.set_index("PetID").join(test_metadata.set_index("PetID")).reset_index()
 
 
     return train, test
 
 
 
-def get_desc_anly(type, rc):
-
-    if type == "train":
-        path = Paths.base.value+"train_sentiment/"#../input/train_sentiment/
-        fpath = Paths.base.value+"train_sentiment/train_sentiment.csv"
-    else:
-        path = Paths.base.value+"test_sentiment/"#../input/test_sentiment/
-        fpath = Paths.base.value + "test_sentiment/test_sentiment.csv"
-
-    if rc == 1 or not(os.path.exists(fpath)):
-        if os.path.exists(fpath):
-            os.remove(fpath)
-        print("reparsing description sentiment")
-        files = [f for f in sorted(os.listdir(path)) if (f.endswith('.json') & os.path.isfile(path+f))]
+def get_desc_anly(type, recalc):
+    if recalc == 1:
+        if type == "train":
+            path = Paths.base.value + "train_sentiment/"  # ../input/train_sentiment/
+        elif type == "test":
+            path = Paths.base.value + "test_sentiment/"  # ../input/test_sentiment/
+        print("Getting description sentiment analysis for", type + "_sentiment.csv")
+        files = [f for f in os.listdir(path) if (f.endswith('.json') & os.path.isfile(path + f))]
 
         df = pd.DataFrame(columns=["PetID", "DescScore", "DescMagnitude"])
         i = 0
         for f in files:
-            #print(path + f)
-            with open(path+f, encoding="utf8") as json_data:
+            # print(path + f)
+            with open(path + f, encoding="utf8") as json_data:
                 data = json.load(json_data)
-            #print(data)
-            #pf = pd.DataFrame.from_dict(data, orient='index').T.set_index('index')
+            # print(data)
+            # pf = pd.DataFrame.from_dict(data, orient='index').T.set_index('index')
 
-            #print(data["documentSentiment"]["score"],data["documentSentiment"]["magnitude"])
-            df.loc[i]= [f[:-5],data["documentSentiment"]["score"],data["documentSentiment"]["magnitude"]]
-            i = i+1
+            # print(data["documentSentiment"]["score"],data["documentSentiment"]["magnitude"])
+            df.loc[i] = [f[:-5], data["documentSentiment"]["score"], data["documentSentiment"]["magnitude"]]
+            i = i + 1
+        df.to_csv(Paths.base.value + type + "_sentiment.csv", index=False)
+    elif recalc == 0:
+        df = pd.read_csv(Paths.base.value + type + "_sentiment.csv")
+    return df
 
-        df.to_csv(fpath,index=False)
-    return pd.read_csv(fpath)
 
+def get_img_meta(type, img_num, recalc):
+    # getting image analyse metadata
+    if recalc == 1:
+        if type == "train":
+            path = Paths.base.value+"train_metadata/"
+        else:
+            path = Paths.base.value+"test_metadata/"
 
-def get_img_meta(type, rc):
+        if img_num == "1":
+            cols = Columns.iden_columns.value + Columns.img_num_cols_1.value + Columns.img_lbl_cols_1.value
+            df_imgs = pd.DataFrame(columns=cols)
+        elif img_num == "2":
+            cols = Columns.iden_columns.value + Columns.img_num_cols_2.value + Columns.img_lbl_cols_2.value
+            df_imgs = pd.DataFrame(columns=cols)
+        elif img_num == "3":
+            cols = Columns.iden_columns.value + Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value
+            df_imgs = pd.DataFrame(columns=cols)
+        else:
+            print("This function supports images until 3rd, so img_num should be <= 3")
+            return False
 
-    if type == "train":
-        path = Paths.base.value + "train_metadata/"  # ../input/train_sentiment/
-        fpath = Paths.base.value + "train_metadata/train_metadata.csv"
-    else:
-        path = Paths.base.value + "test_metadata/"  # ../input/test_sentiment/
-        fpath = Paths.base.value + "test_metadata/test_metadata.csv"
+        print("Getting image analyse metadata for", type, img_num, "files")
 
-    df_imgs = pd.DataFrame(
-        columns=Columns.iden_columns.value + Columns.img_num_cols_1.value + Columns.img_lbl_cols_1.value
-                + Columns.img_num_cols_2.value + Columns.img_lbl_cols_2.value
-                + Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value + Columns.img_lbl_col.value)
-
-    if rc == 1 or not (os.path.exists(fpath)):
-        print("reparsing image metadata")
-        if os.path.exists(fpath):
-            os.remove(fpath)
-
-        images = [f for f in sorted(os.listdir(path)) if ((f.endswith('-1.json') or f.endswith('-2.json') or f.endswith('-3.json')) & os.path.isfile(path + f))]
+        images = [f for f in sorted(os.listdir(path)) if
+                  (f.endswith("-" + img_num + ".json") & os.path.isfile(path + f))]
 
         i = 0
-        l_petid = ""
-        k = 0
         for img in images:
             PetID = img[:-7]
-            if (l_petid != PetID) & (l_petid != ""):
-                k += 1
-            #print(i, PetID,k, img, (img[-6:-5]), l_petid)
+            # print(i, PetID,k, img, (img[-6:-5]), l_petid)
 
             with open(path + img, encoding="utf8") as json_data:
                 data = json.load(json_data)
-            vertex_x = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x',-1)
-            vertex_y = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y',-1)
-            bounding_confidence = data['cropHintsAnnotation']['cropHints'][0].get('confidence',-1)
+            vertex_x = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x', -1)
+            vertex_y = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y', -1)
+            bounding_confidence = data['cropHintsAnnotation']['cropHints'][0].get('confidence', -1)
             bounding_importance_frac = data['cropHintsAnnotation']['cropHints'][0].get('importanceFraction', -1)
             dominant_blue = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('blue', 255)
             dominant_green = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('green', 255)
             dominant_red = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('red', 255)
             RGBint = (dominant_red << 16) + (dominant_green << 8) + dominant_blue
-            dominant_pixel_frac = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('pixelFraction', -1)
+            dominant_pixel_frac = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('pixelFraction',
+                                                                                                       -1)
             dominant_score = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('score', -1)
 
             if data.get('labelAnnotations'):
@@ -215,42 +211,15 @@ def get_img_meta(type, rc):
                 label_description = 'nothing'
                 label_score = -1
 
-            if img[-6:-5] == "1":
-                df_imgs.loc[k, Columns.iden_columns.value + Columns.img_num_cols_1.value + Columns.img_lbl_cols_1.value] = \
-                    [PetID,vertex_x, vertex_y, bounding_confidence,bounding_importance_frac, RGBint,
-                                dominant_pixel_frac, dominant_score, label_score, label_description]
-
-            if img[-6:-5] == "2":
-                df_imgs.loc[k, Columns.img_num_cols_2.value + Columns.img_lbl_cols_2.value] =  \
-                    [vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
-                            dominant_pixel_frac, dominant_score, label_score, label_description]
-
-            if img[-6:-5] == "3":
-                df_imgs.loc[k, Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value] = \
-                    [vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
-                            dominant_pixel_frac, dominant_score, label_score, label_description]
-
-
-            if (i == 1):
-                l_petid = PetID
-
-            if (l_petid != PetID):
-                l_petid = PetID
+            df_imgs.loc[i, cols] = [PetID, vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
+                                    dominant_pixel_frac, dominant_score, label_score, label_description]
 
             i += 1
 
-        df_imgs[Columns.img_lbl_col.value[0]] = df_imgs[Columns.img_lbl_cols_1.value[0]] \
-                                                + " " + df_imgs[Columns.img_lbl_cols_2.value[0]] \
-                                                + " " + df_imgs[Columns.img_lbl_cols_3.value[0]]
-        #df_imgs.drop(["Lbl_Dsc_1","Lbl_Dsc_2", "Lbl_Dsc_3"], axis=1, inplace=True)
-
-        df_imgs[Columns.img_lbl_col.value[0]].fillna("none", inplace=True)
-        df_imgs.fillna(-1, inplace=True)
-        print(df_imgs.head())
-        if os.path.isfile(fpath):
-            pd.read_csv(fpath)
-
-        df_imgs.to_csv(fpath, index=False)
+        #print(df_imgs.head())
+        df_imgs.to_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv", index=False)
+    elif recalc == 0:
+        df_imgs = pd.read_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv")
 
     return df_imgs
 
@@ -264,7 +233,8 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
-    print(train.iloc[[1,3,5]])
+    print(train.describe(include="all"))
+    print(test.describe(include="all"))
     sys.exit()
     #print(train.head())
     #x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
