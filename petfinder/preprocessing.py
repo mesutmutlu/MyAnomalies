@@ -45,16 +45,14 @@ def prepare_data(train, test):
     enc = LabelEncoder()
     train["RescuerID"] = enc.fit_transform(train["RescuerID"])
     test["RescuerID"] = enc.fit_transform(test["RescuerID"])
-    drop_cols = Columns.ind_text_columns.value + Columns.img_lbl_cols_1.value + Columns.img_lbl_cols_1.value + \
-           Columns.img_lbl_cols_1.value + Columns.img_lbl_col.value
+    drop_cols = Columns.ind_text_columns.value + Columns.img_lbl_cols_1.value + Columns.img_lbl_cols_2.value + \
+           Columns.img_lbl_cols_3.value + Columns.img_lbl_col.value
     train.drop(drop_cols, axis=1, inplace=True)
     test.drop(drop_cols, axis=1, inplace=True)
 
-    train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value +
-                    Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value]
+    train_x = train.drop(Columns.dep_columns.value, axis=1)
     train_y = train[Columns.dep_columns.value]
-    test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value +
-                  Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value]
+    test_x = test.drop(Columns.iden_columns.value, axis=1)
     test_id = test[Columns.iden_columns.value]
     #train_x, test_x = scale_num_var(train_x, test_x)
     train_x.fillna(-1, inplace=True)

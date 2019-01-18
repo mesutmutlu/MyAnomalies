@@ -233,7 +233,8 @@ params = {'application': 'regression',
           'data_random_seed': 3,
           'early_stop': 100,
           'verbose_eval': 100,
-          'num_rounds': 10000}
+          'num_rounds': 10000,
+          'lambda_l2': 0.05}
 
 def runLGB(train_X, train_y, test_X, test_y, test_X2, params):
     print('Prep LGB')
