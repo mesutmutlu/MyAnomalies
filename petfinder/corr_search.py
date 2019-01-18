@@ -95,12 +95,16 @@ def correlation_ratio(categories, measurements):
 
 def by_correlation_ratio(df, dep_col, cols):
     # for mix correlation
-    cr = pd.DataFrame( columns=cols)
+    print(df)
+    cr = pd.DataFrame(columns=cols)
+    print(cr)
     i = 0
     for c in cols:
+        print(df[dep_col].values,df[c].values)
         eta = correlation_ratio(df[dep_col], df[c])
+        print(eta)
         cr.loc[i, c] = eta
-    i = i + 1
+        i = i + 1
     cr.fillna(value=np.nan, inplace=True)
     # plt.figure(figsize=(20, 1))
     return cr
@@ -290,8 +294,43 @@ if __name__ == "__main__":
     # print(flights)
 
     # check correlation for numerical values
-    cr = by_correlation_ratio(pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
+
+    idx_dogs = x_train.index[x_train["Type"] == 1].tolist()
+    idx_cats = x_train.index[x_train["Type"] == 2].tolist()
+
+    x_train_dogs = x_train.iloc[idx_dogs]
+    y_train_dogs = y_train.iloc[idx_dogs]
+    x_train_cats = x_train.iloc[idx_cats]
+    y_train_cats = y_train.iloc[idx_cats]
+    x_test_dogs = x_test.iloc[idx_dogs]
+    id_test_dogs = id_test.iloc[idx_dogs]
+    x_test_cats = x_test.iloc[idx_dogs]
+    id_test_cats = id_test.iloc[idx_cats]
+
+    cr = by_correlation_ratio(pd.concat([x_train, y_train] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
     print(cr)
+
+    #print(x_train.iloc[idx_dogs][Columns.ind_cont_columns.value])
+    cr_dogs = by_correlation_ratio(pd.concat([x_train_dogs, y_train_dogs] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
+    print(cr_dogs)
+
+
+
+    cr_cats = by_correlation_ratio(pd.concat([x_train_cats, y_train_cats] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
+    print(cr_cats)
+    sys.exit()
+    corr = pd.concat([x_train[Columns.ind_cont_columns.value], y_train], axis=1)
+    corr_dogs = pd.concat([x_train.iloc[idx_dogs][Columns.ind_cont_columns.value], y_train.iloc[idx_dogs]], axis=1)
+    corr_cats = pd.concat([x_train.iloc[idx_cats][Columns.ind_cont_columns.value], y_train.iloc[idx_cats]], axis=1)
+    plt.rcParams["figure.figsize"] = [10, 10]
+    sns.heatmap(corr.corr(), annot=True, fmt='.2f')
+    plt.show()
+    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f')
+    plt.show()
+    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f')
+    print("correlations of numerical values")
+    plt.show()
+
     sys.exit()
     ds = pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1)
     print(ds)

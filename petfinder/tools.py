@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 from nltk.corpus import stopwords
+import nltk
 
 def create_dict(file, idx, col):
     df = pd.read_csv(file)
@@ -108,9 +109,4 @@ def fill_na(arr, cols, val):
 
 if __name__ == "__main__":
 
-    a = [0]
-    b = 2
-    min = [0]
-
-    print(a-min)
-    print(b-min)
+    nltk.download()
