@@ -63,14 +63,14 @@ class Paths(Enum):
 
 class Columns(Enum):
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity",
-                        "DescScore", "DescMagnitude", "DescLength", "NameLegth"]
+                        "DescScore", "DescMagnitude", "DescLength", "NameLength"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
                            "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID",
                            "FurLength", "MaturitySize"]
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
-    n_desc_svdcomp = 120
+    n_desc_svdcomp = 70
     desc_cols = ["desc_svd_" + str(i) for i in range(n_desc_svdcomp)]
     img_num_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
                 "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Scr_1",]
@@ -83,7 +83,7 @@ class Columns(Enum):
     img_lbl_cols_3 = ["Lbl_Img_3"]
     img_lbl_col = ["Lbl_Dsc"]
     n_img_anl = 3
-    n_iann_svdcomp = 10
+    n_iann_svdcomp = 5
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
 
 
@@ -118,8 +118,8 @@ def read_data():
     #train["Lbl_Dsc"].fillna("none",  inplace=True)
     #test["Lbl_Dsc"].fillna("none",  inplace=True)
 
-    train_df = train.set_index("PetID").join(train_metadata.set_index("PetID")).reset_index()
-    test_df = test.set_index("PetID").join(test_metadata.set_index("PetID")).reset_index()
+    train = train.set_index("PetID").join(train_metadata.set_index("PetID")).reset_index()
+    test = test.set_index("PetID").join(test_metadata.set_index("PetID")).reset_index()
 
 
     return train, test

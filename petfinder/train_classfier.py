@@ -132,7 +132,7 @@ def iterate_by_randomsearch(train_x, train_y):
               #'feature_fraction': sp.stats.uniform(0.4, 0.9),
               #'lambda_l1': sp.stats.randint(0,45),
               #'objective': 'multiclass',
-                                "n_jobs":[-1],} )
+                                "n_jobs":[4],} )
     ]
 
     df = pd.DataFrame(columns=['alg', 'best_estimator', 'perf', 'est','rank','mean','std', 'parameters'])

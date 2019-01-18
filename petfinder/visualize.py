@@ -12,7 +12,6 @@ import math
 from petfinder.get_explore import read_data
 from scipy.stats import ttest_rel
 from petfinder.get_explore import Columns
-from petfinder.tools import conv_cat_variable
 from petfinder.preprocessing import prepare_data
 import matplotlib as mpl
 from pylab import rcParams
