@@ -10,6 +10,7 @@ from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 import pandas as pd
 from petfinder.preprocessing import prepare_data
 from petfinder.get_explore import read_data, Columns, Paths
+import random
 
 def confusion_matrix(rater_a, rater_b, min_rating=None, max_rating=None):
     """
@@ -268,6 +269,70 @@ def runLGB(train_X, train_y, test_X, test_y, test_X2, params):
     pred_test_y2 = model.predict(test_X2, num_iteration=model.best_iteration)
     return pred_test_y.reshape(-1, 1), pred_test_y2.reshape(-1, 1), model.feature_importance(), coefficients, qwk
 
+
+def by_regressor_rs(train, test, y_train, runALG, metric, name, cv, i, id_test):
+    mqwk = 0
+    j = 0
+    for j in range(10):
+        params = {'application': 'regression',
+              'boosting': 'gbdt',
+              'metric': 'rmse',
+              'num_leaves': random.randint(50, 200),
+              'max_depth': random.randint(5, 25),
+              'learning_rate': random.uniform(0.001, 0.05),
+              'bagging_fraction': random.uniform(0.5, 1),
+              'feature_fraction': random.uniform(0.5, 1),
+              'min_split_gain': random.uniform(0.001, 0.05),
+              'min_child_samples': random.randint(75, 200),
+              'min_child_weight': random.uniform(0.001, 0.05),
+              'verbosity': -1,
+              'data_random_seed': 3,
+              'early_stop': 100,
+              'verbose_eval': False,
+              'n_jobs':4,
+              'lambda_l2': random.uniform(0.001, 0.1),
+              'num_rounds': 10000}
+        print("RS prms", params)
+        results_t = run_cv_model(train, test, y_train, runALG, params, metric, name, cv, i)
+        print("RS QWK Scores", results_t["qwk"], "rs mean qwk scores", np.mean(results_t["qwk"]))
+        if np.mean(results_t["qwk"]) > mqwk:
+            results = results_t
+            mqwk = np.mean(results_t["qwk"])
+    optR = OptimizedRounder()
+    coefficients_ = np.mean(results['coefficients'], axis=0)
+    print(coefficients_)
+    train_predictions = [r[0] for r in results['train']]
+    train_predictions = optR.predict(train_predictions, coefficients_).astype(int)
+    Counter(train_predictions)
+
+    optR = OptimizedRounder()
+    test_predictions = [r[0] for r in results['test']]
+    test_predictions = optR.predict(test_predictions, coefficients_).astype(int)
+    Counter(test_predictions)
+
+    pd.DataFrame(sk_cmatrix(y_train, train_predictions), index=list(range(5)), columns=list(range(5)))
+    submission = pd.DataFrame({'PetID': id_test.PetID.values, 'AdoptionSpeed': test_predictions})
+    return submission
+
+
+def by_regressor(train, test, y_train, runALG, prms, metric, name, cv, i, id_test):
+    results = run_cv_model(train, test, y_train, runALG, prms, metric, name, cv, i)
+
+    optR = OptimizedRounder()
+    coefficients_ = np.mean(results['coefficients'], axis=0)
+    print(coefficients_)
+    train_predictions = [r[0] for r in results['train']]
+    train_predictions = optR.predict(train_predictions, coefficients_).astype(int)
+    Counter(train_predictions)
+
+    optR = OptimizedRounder()
+    test_predictions = [r[0] for r in results['test']]
+    test_predictions = optR.predict(test_predictions, coefficients_).astype(int)
+    Counter(test_predictions)
+
+    pd.DataFrame(sk_cmatrix(y_train, train_predictions), index=list(range(5)), columns=list(range(5)))
+    submission = pd.DataFrame({'PetID': id_test.PetID.values, 'AdoptionSpeed': test_predictions})
+    return submission
 
 if __name__ == "__main__":
 

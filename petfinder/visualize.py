@@ -124,12 +124,10 @@ if __name__ == "__main__":
     train, test = read_data()
 
     #ax1 = sns.barplot(x="AdoptionSpeed", data=train, hue="Type")
-    plt.show()
-    print(train.groupby(["Type"])["AdoptionSpeed"].value_counts(normalize=True).rename('percentage').mul(100).reset_index())
-
-    sys.exit()
 
     x_train, y_train, x_test, id_test = prepare_data(train, test)
+
+    num_boxp(pd.concat([x_train, y_train], axis = 1), Columns.ind_cont_columns.value)
 
 
 

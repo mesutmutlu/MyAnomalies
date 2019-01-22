@@ -2,13 +2,19 @@ from scipy.optimize import minimize, rosen, rosen_der
 
 from sklearn.feature_extraction import stop_words
 
-
+import sys
 from nltk.corpus import stopwords
+import numpy as np
+import pandas as pd
 
 
 if __name__ == "__main__":
 
     x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
+
+    pd = pd.DataFrame(data =[1.3, 0.7, 0.8, 1.9, 1.2])
+    print(pd)
+    sys.exit()
     x1 = [1, 1, 1, 1, 1]
 
     r = rosen(x0)

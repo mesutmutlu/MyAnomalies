@@ -10,7 +10,7 @@ import numpy as np
 from collections import Counter
 import math
 from petfinder.preprocessing import prepare_data
-from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp
+from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp, kruskal
 import datetime
 from petfinder.get_explore import read_data
 from petfinder.get_explore import Paths
@@ -268,153 +268,46 @@ def check_samples_diff2(df, dep_col):
                 i = i + 1
     return res
 
+def by_kruskal(arr, dep_col):
+#check adoption speed median for different categories, each category value should have at least 5 measurements
+    df =  pd.DataFrame(columns=arr.columns.values)
+
+    for c in arr.columns.values:
+        print("-------Kruskal Wallis H-test test for :--------", c)
+        arg = []
+        for v in arr[c].unique():
+            #print("number of measurements of value", v, "on column", c, "is", len(arr[arr[c] == v]))
+            if (len(arr[arr[c] == v]) >= 5):
+                #print(arr[arr[dep_col] == v][c].head())
+                arg.append(arr[arr[c] == v][dep_col])
+        print("number of categorical groups having more than 5 ameasurements found is ", len(arg), "/",len(arr[c].unique()) )
+        if len(arg)>=2:
+            H, pval = kruskal(*arg)
+
+            print(c, "H-statistic:", H, "P-Value:", pval)
+
+            if pval < 0.05:
+                print("Reject NULL hypothesis - Significant differences exist between groups.")
+                df.loc[0, c] = 0
+            if pval > 0.05:
+                print("Accept NULL hypothesis - No significant difference between groups.")
+                df.loc[0, c] = 1
+        else:
+            df.loc[0, c] = -1
+
+    sns.heatmap(df, annot=True, fmt='.2f')
+    plt.show()
 
 if __name__ == "__main__":
-
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     train, test = read_data()
     x_train, y_train, x_test, id_test = prepare_data(train, test)
-    #x_train.drop(["RescuerID", "DescScore", "DescMagnitude"], axis=1, inplace=True)
-    #x_train.drop(Columns.desc_cols.value, axis=1, inplace=True)
-    #print(x_train[Columns.ind_num_cat_columns.value],)
-    # print(by_skchi(x_train[Columns.ind_num_cat_columns.value], y_train))
-    # print(by_sschi(x_train[Columns.ind_num_cat_columns.value], y_train))
-
-    # df_a = pd.concat([x_train[Columns.ind_num_cat_columns.value], y_train], axis=1)
-    # print(by_theilsu(pd.concat([x_train[Columns.ind_num_cat_columns.value],y_train],axis=1),
-    #                  Columns.ind_num_cat_columns.value+Columns.dep_columns.value))
-
-    # flights = sns.load_dataset("flights")
-    # flights = flights.pivot("month", "year", "passengers")
-    # print(flights)
-
-    # check correlation for numerical values
-    print(x_train.columns.values)
-
-    tr_idx_dogs = x_train.index[x_train["Type"] == 1].tolist()
-    tr_idx_cats = x_train.index[x_train["Type"] == 2].tolist()
-
-    te_idx_dogs = x_test.index[x_test["Type"] == 1].tolist()
-    te_idx_cats = x_test.index[x_test["Type"] == 2].tolist()
-
-    x_train_dogs = x_train.iloc[tr_idx_dogs].reset_index()
-    y_train_dogs = y_train.iloc[tr_idx_dogs].reset_index()
-    x_train_cats = x_train.iloc[tr_idx_cats].reset_index()
-    y_train_cats = y_train.iloc[tr_idx_cats].reset_index()
-    x_test_dogs = x_test.iloc[te_idx_dogs].reset_index()
-    id_test_dogs = id_test.iloc[te_idx_dogs].reset_index()
-    x_test_cats = x_test.iloc[te_idx_cats].reset_index()
-    id_test_cats = id_test.iloc[te_idx_cats].reset_index()
-
-    cr = by_correlation_ratio(pd.concat([x_train, y_train] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
-    cr_dogs = by_correlation_ratio(pd.concat([x_train_dogs, y_train_dogs] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
-    cr_cats = by_correlation_ratio(pd.concat([x_train_cats, y_train_cats] ,axis=1), Columns.dep_columns.value[0], Columns.ind_cont_columns.value)
-
-    cr_all = pd.concat([cr, cr_dogs, cr_cats])
-    df_cr_all = pd.DataFrame(index=(["All", "Dogs", "Cats"]), data=(cr_all.values), columns=cr_all.columns.values)
-    sns.heatmap(df_cr_all, annot=True, fmt='.2f')
-    plt.show()
-
-    corr = pd.concat([x_train[Columns.ind_cont_columns.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.ind_cont_columns.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.ind_cont_columns.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between numerical variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between numerical variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between numerical variables and ordinal dependant variable')
-    plt.show()
-
-
-
-    corr = pd.concat([x_train[Columns.desc_cols.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.desc_cols.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.desc_cols.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=False, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between description svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=False, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between description svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=False, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between description svd variables and ordinal dependant variable')
-    plt.show()
-
-    corr = pd.concat([x_train[Columns.iann_cols.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.iann_cols.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.iann_cols.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between image description svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between image description svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between image description svd variables and ordinal dependant variable')
-    plt.show()
-
-    corr = pd.concat([x_train[Columns.img_num_cols_1.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.img_num_cols_1.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.img_num_cols_1.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between first image metadata svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between first image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between first image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-
-    corr = pd.concat([x_train[Columns.img_num_cols_2.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.img_num_cols_2.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.img_num_cols_2.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between second image metadata svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between second image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between second image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-
-    corr = pd.concat([x_train[Columns.img_num_cols_3.value], y_train], axis=1)
-    corr_dogs = pd.concat([x_train_dogs[Columns.img_num_cols_3.value], y_train_dogs], axis=1)
-    corr_cats = pd.concat([x_train_cats[Columns.img_num_cols_3.value], y_train_cats], axis=1)
-    plt.rcParams["figure.figsize"] = [10, 10]
-    ax = plt.axes()
-    sns.heatmap(corr.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Full dataset correlation between third image metadata svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_dogs.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Dogs dataset correlation between third image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-    sns.heatmap(corr_cats.corr(), annot=True, fmt='.2f', ax=ax)
-    ax.set_title('Cats dataset correlation between third image metadata  svd variables and ordinal dependant variable')
-    plt.show()
-
-
-    sys.exit()
-    ds = pd.concat([x_train[Columns.ind_cont_columns.value], y_train] ,axis=1)
-    print(ds)
-    print(ds.corr())
-    plt.rcParams["figure.figsize"] = [10, 10]
-    sns.heatmap(ds.corr(), annot=True, fmt='.2f')
-    plt.show()
-
+    f_train = pd.concat([x_train, y_train], axis=1)
+    #arg = []
+    #arg.append(train[train["Type"]==1]["AdoptionSpeed"])
+    #arg.append(train[train["Type"]==2]["AdoptionSpeed"])
+    #print(kruskal(train[train["Type"]==1]["AdoptionSpeed"], train[train["Type"]==2]["AdoptionSpeed"]))
+    #print(kruskal(*arg))
+    by_kruskal(f_train[Columns.ind_num_cat_columns.value+Columns.dep_columns.value], Columns.dep_columns.value[0])
