@@ -61,7 +61,8 @@ def detect_outliers(f_train, id):
 
     # Define datasets
     #print(f_train.head())
-    if 1 == 0 :
+    df_pred = pd.DataFrame()
+    if 1 == 1 :
         for name, algorithm in anomaly_algorithms:
             t0 = time.time()
             # algorithm.fit(f_train)
@@ -73,15 +74,17 @@ def detect_outliers(f_train, id):
             else:
                 y_pred = algorithm.fit(f_train).predict(f_train)
 
-            print(name, y_pred)
-            df_pred = pd.DataFrame(data=y_pred)
-            print(df_pred)
+            #print(name, y_pred)
+            df_pred[name] = y_pred
+            #print(df_pred)
+    if 1 == 0:
+        clf = VotingClassifier(estimators=anomaly_algorithms, voting='soft')
+        y_pred = clf.fit(f_train, y=None).predict(f_train)
+        # print(test_id.shape, pred.shape)
 
-    clf = VotingClassifier(estimators=anomaly_algorithms, voting='soft')
-    y_pred = clf.fit(f_train, y=None).predict(f_train)
-    # print(test_id.shape, pred.shape)
+
     prediction_df = pd.DataFrame({'PetID': id.values.ravel(),
-                                  'AdoptionSpeed': y_pred})
+                                  'AdoptionSpeed': df_pred.values})
 
     # create submission file print(prediction_df)
     return prediction_df
