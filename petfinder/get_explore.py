@@ -233,8 +233,13 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
     train, test = read_data()
-    print(train.describe(include="all"))
-    print(test.describe(include="all"))
+    train["adop2"] = train["AdoptionSpeed"]
+    h = train[['RescuerID', 'AdoptionSpeed']].groupby(['RescuerID']).agg(['count', "mean"])
+    h.columns = h.columns.droplevel()
+    print(h.sort_values(by=['count', 'mean'],ascending=False))
+    print(train.groupby('RescuerID')["AdoptionSpeed"].value_counts(normalize=True).rename('percentage').mul(
+            100).reset_index())
+
     sys.exit()
     #print(train.head())
     #x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")

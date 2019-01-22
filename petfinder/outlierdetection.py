@@ -55,7 +55,7 @@ def detect_outliers(f_train, id):
         # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
         ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
                                           gamma=0.1)),
-        ("Isolation Forest", IsolationForest(behaviour='new',
+        ("Isolation Forest", IsolationForest(#behaviour='new',
                                              contamination=outliers_fraction,
                                              random_state=42)),
         ("Local Outlier Factor", LocalOutlierFactor(
@@ -63,7 +63,7 @@ def detect_outliers(f_train, id):
 
     # Define datasets
     #print(f_train.head())
-    df_pred = pd.DataFrame()
+    df_pred = pd.DataFrame(columns=["One-Class SVM","Isolation Forest","Local Outlier Factor"])
     if 1 == 1 :
         for name, algorithm in anomaly_algorithms:
             #t0 = time.time()
@@ -86,10 +86,9 @@ def detect_outliers(f_train, id):
         # print(test_id.shape, pred.shape)
     for index, row in df_pred.iterrows():
 
-        df_pred["final_class"] = Counter(row["One-Class SVM","Isolation Forest""Local Outlier Factor"].values.ravel()).most_common(1)[0][0]
+        df_pred["final_class"] = Counter(row[["One-Class SVM","Isolation Forest","Local Outlier Factor"]].values.ravel()).most_common(1)[0][0]
 
-    prediction_df = pd.DataFrame({'PetID': id.values.ravel(),
-                                  'AdoptionSpeed': df_pred.values})
+    prediction_df = pd.concat([id,df_pred.values], axis=1)
 
     # create submission file print(prediction_df)
     return prediction_df
