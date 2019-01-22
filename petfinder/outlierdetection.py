@@ -14,6 +14,8 @@ from petfinder.preprocessing import prepare_data
 import pandas as pd
 import sys
 from sklearn.ensemble import VotingClassifier
+import datetime
+from collections import Counter
 
 print(__doc__)
 
@@ -64,9 +66,10 @@ def detect_outliers(f_train, id):
     df_pred = pd.DataFrame()
     if 1 == 1 :
         for name, algorithm in anomaly_algorithms:
-            t0 = time.time()
+            #t0 = time.time()
             # algorithm.fit(f_train)
-            t1 = time.time()
+            print(name, datetime.datetime.now())
+            #t1 = time.time()
 
             # fit the data and tag outliers
             if name == "Local Outlier Factor":
@@ -81,7 +84,9 @@ def detect_outliers(f_train, id):
         clf = VotingClassifier(estimators=anomaly_algorithms, voting='soft')
         y_pred = clf.fit(f_train, y=None).predict(f_train)
         # print(test_id.shape, pred.shape)
+    for index, row in df_pred.iterrows():
 
+        df_pred["final_class"] = Counter(row["One-Class SVM","Isolation Forest""Local Outlier Factor"].values.ravel()).most_common(1)[0][0]
 
     prediction_df = pd.DataFrame({'PetID': id.values.ravel(),
                                   'AdoptionSpeed': df_pred.values})
@@ -89,6 +94,9 @@ def detect_outliers(f_train, id):
     # create submission file print(prediction_df)
     return prediction_df
 if __name__ == "__main__":
+    L = [1, 2, 45, 55, 5, 4, 4, 4, 4, 4, 4, 5456, 56, 6, 7, 67]
+    print(Counter(L).most_common(1)[0][0])
+    most_common, num_most_common = Counter(L).most_common(1)[0]  # 4, 6 times
 
     train, test = read_data()
 
@@ -97,6 +105,6 @@ if __name__ == "__main__":
     f_train = pd.concat([x_train, y_train], axis=1)
 
     #print(f_train.values)
-    print(f_train.columns.values)
+    #print(f_train.columns.values)
     pred = detect_outliers(f_train.drop(["PetID"], axis=1), f_train["PetID"])
     print(pred)
