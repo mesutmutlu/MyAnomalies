@@ -13,6 +13,7 @@ from petfinder.get_explore import read_data
 from petfinder.preprocessing import prepare_data
 import pandas as pd
 import sys
+from sklearn.ensemble import VotingClassifier
 
 print(__doc__)
 
@@ -41,17 +42,7 @@ def MD_detectOutliers(data):
     df_outliers = pd.DataFrame(data=outliers)
     df_outliers.to_csv("mala.csv", delimiter=",")
 
-if __name__ == "__main__":
-
-    train, test = read_data()
-
-    x_train, y_train, x_test, id_test = prepare_data(train, test)
-
-    f_train = pd.concat([x_train, y_train], axis=1).drop(["PetID"], axis=1)
-
-    #print(f_train.values)
-
-    # Example settings
+def detect_outliers(f_train, id):
     n_samples = len(f_train)
     outliers_fraction = 0.10
     n_outliers = int(outliers_fraction * n_samples)
@@ -59,7 +50,7 @@ if __name__ == "__main__":
 
     # define outlier/anomaly detection methods to be compared
     anomaly_algorithms = [
-        #("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
+        # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
         ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
                                           gamma=0.1)),
         ("Isolation Forest", IsolationForest(behaviour='new',
@@ -69,18 +60,40 @@ if __name__ == "__main__":
             n_neighbors=35, contamination=outliers_fraction))]
 
     # Define datasets
-    print(f_train.head())
-    for name, algorithm in anomaly_algorithms:
-        t0 = time.time()
-        #algorithm.fit(f_train)
-        t1 = time.time()
+    #print(f_train.head())
+    if 1 == 0 :
+        for name, algorithm in anomaly_algorithms:
+            t0 = time.time()
+            # algorithm.fit(f_train)
+            t1 = time.time()
 
-        # fit the data and tag outliers
-        if name == "Local Outlier Factor":
-            y_pred = algorithm.fit_predict(f_train)
-        else:
-            y_pred = algorithm.fit(f_train).predict(f_train)
+            # fit the data and tag outliers
+            if name == "Local Outlier Factor":
+                y_pred = algorithm.fit_predict(f_train)
+            else:
+                y_pred = algorithm.fit(f_train).predict(f_train)
 
-        print(name, y_pred)
-        df_pred = pd.DataFrame(data=y_pred)
-        print(df_pred)
+            print(name, y_pred)
+            df_pred = pd.DataFrame(data=y_pred)
+            print(df_pred)
+
+    clf = VotingClassifier(estimators=anomaly_algorithms, voting='soft')
+    y_pred = clf.fit(f_train, y=None).predict(f_train)
+    # print(test_id.shape, pred.shape)
+    prediction_df = pd.DataFrame({'PetID': id.values.ravel(),
+                                  'AdoptionSpeed': y_pred})
+
+    # create submission file print(prediction_df)
+    return prediction_df
+if __name__ == "__main__":
+
+    train, test = read_data()
+
+    x_train, y_train, x_test, id_test = prepare_data(train, test)
+
+    f_train = pd.concat([x_train, y_train], axis=1)
+
+    #print(f_train.values)
+    print(f_train.columns.values)
+    pred = detect_outliers(f_train.drop(["PetID"], axis=1), f_train["PetID"])
+    print(pred)

@@ -273,30 +273,33 @@ def by_kruskal(arr, dep_col):
     df =  pd.DataFrame(columns=arr.columns.values)
 
     for c in arr.columns.values:
-        print("-------Kruskal Wallis H-test test for :--------", c)
-        arg = []
-        for v in arr[c].unique():
-            #print("number of measurements of value", v, "on column", c, "is", len(arr[arr[c] == v]))
-            if (len(arr[arr[c] == v]) >= 5):
-                #print(arr[arr[dep_col] == v][c].head())
-                arg.append(arr[arr[c] == v][dep_col])
-        print("number of categorical groups having more than 5 ameasurements found is ", len(arg), "/",len(arr[c].unique()) )
-        if len(arg)>=2:
-            H, pval = kruskal(*arg)
+        if c != dep_col:
+            print("-------Kruskal Wallis H-test test for :--------", c)
+            arg = []
+            for v in arr[c].unique():
+                #print("number of measurements of value", v, "on column", c, "is", len(arr[arr[c] == v]))
+                if (len(arr[arr[c] == v]) >= 5):
+                    #print(arr[arr[dep_col] == v][c].head())
+                    arg.append(arr[arr[c] == v][dep_col])
+            print("number of categorical groups having more than 5 ameasurements found is ", len(arg), "/",len(arr[c].unique()) )
+            if len(arg)>=2:
+                H, pval = kruskal(*arg)
 
-            print(c, "H-statistic:", H, "P-Value:", pval)
+                print(c, "H-statistic:", H, "P-Value:", pval)
 
-            if pval < 0.05:
-                print("Reject NULL hypothesis - Significant differences exist between groups.")
-                df.loc[0, c] = 0
-            if pval > 0.05:
-                print("Accept NULL hypothesis - No significant difference between groups.")
-                df.loc[0, c] = 1
-        else:
-            df.loc[0, c] = -1
+                if pval < 0.05:
+                    print("Reject NULL hypothesis - Significant differences exist between groups.")
+                    df.loc[0, c] = 1
+                if pval > 0.05:
+                    print("Accept NULL hypothesis - No significant difference between groups.")
+                    df.loc[0, c] = 0
+            else:
+                print("Not Tested Because of lack of at least 2 groupes having minimum 5 measurements")
+                df.loc[0, c] = -1
 
-    sns.heatmap(df, annot=True, fmt='.2f')
-    plt.show()
+    print(df)
+    #sns.heatmap(df, annot=True)
+    #plt.show()
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
@@ -308,6 +311,9 @@ if __name__ == "__main__":
     #arg = []
     #arg.append(train[train["Type"]==1]["AdoptionSpeed"])
     #arg.append(train[train["Type"]==2]["AdoptionSpeed"])
-    #print(kruskal(train[train["Type"]==1]["AdoptionSpeed"], train[train["Type"]==2]["AdoptionSpeed"]))
+    print(kruskal(train[train["Type"]==1]["AdoptionSpeed"], train[train["Type"]==2]["AdoptionSpeed"]))
     #print(kruskal(*arg))
     by_kruskal(f_train[Columns.ind_num_cat_columns.value+Columns.dep_columns.value], Columns.dep_columns.value[0])
+
+    for c in Columns.ind_cont_columns.value :
+        by_kruskal(f_train[[c] + Columns.dep_columns.value], c)
