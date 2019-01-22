@@ -88,7 +88,7 @@ def detect_outliers(f_train, id):
 
         df_pred["final_class"] = Counter(row[["One-Class SVM","Isolation Forest","Local Outlier Factor"]].values.ravel()).most_common(1)[0][0]
 
-    prediction_df = pd.concat([id,df_pred.values], axis=1)
+    prediction_df = pd.concat([id,df_pred], axis=1)
 
     # create submission file print(prediction_df)
     return prediction_df
