@@ -13,7 +13,8 @@ from petfinder.get_explore import read_data
 from sklearn.preprocessing import LabelEncoder
 from enum import Enum
 from petfinder.get_explore import Columns, Paths
-from petfinder.tools import tfidf, label_encoder, scale_num_var, tfidf_2
+from petfinder.tools import tfidf, label_encoder, scale_num_var, tfidf_2, detect_outliers
+import os
 
 
 def prepare_data(train, test):
@@ -28,8 +29,6 @@ def prepare_data(train, test):
     test["Lbl_Dsc"].fillna("", inplace=True)
     svd_test_lbldsc = tfidf_2(test["Lbl_Dsc"], 5, Columns.iann_cols.value)
     test = pd.concat([test, svd_test_desc, svd_test_lbldsc], axis=1)
-
-
     train["Name"].fillna("", inplace=True)
     test["Name"].fillna("", inplace=True)
     train["DescLength"] = train["Description"].str.len()
@@ -49,14 +48,20 @@ def prepare_data(train, test):
            Columns.img_lbl_cols_3.value + Columns.img_lbl_col.value
     train.drop(drop_cols, axis=1, inplace=True)
     test.drop(drop_cols, axis=1, inplace=True)
-
-    train_x = train.drop(Columns.dep_columns.value, axis=1)
+    train.fillna(-1, inplace=True)
+    test.fillna(-1, inplace=True)
+    df_o = detect_outliers(train, 0)
+    train = pd.concat([train, df_o], axis=1)
+    train = train[train["outlier"] == 1]
+    train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
+                       + Columns.desc_cols.value + Columns.img_num_cols_1.value
+                       + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value]
     train_y = train[Columns.dep_columns.value]
-    test_x = test.drop(Columns.iden_columns.value, axis=1)
+    test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
+                     + Columns.desc_cols.value + Columns.img_num_cols_1.value
+                     + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value]
     test_id = test[Columns.iden_columns.value]
     #train_x, test_x = scale_num_var(train_x, test_x)
-    train_x.fillna(-1, inplace=True)
-    test_x.fillna(-1, inplace=True)
     return train_x, train_y, test_x, test_id
 
 
@@ -68,7 +73,13 @@ if __name__ == "__main__":
     train, test = read_data()
     #tfidf(train, test)
     train_x, train_y, test_x, test_id = prepare_data(train,test)
-    print(train_x.describe())
-    print(test_x.describe())
+    print(train_x.shape)
+    print(train_x.columns.values)
+    print(train_y.shape)
+    print(train_y.columns.values)
+    print(test_x.shape)
+    print(test_x.columns.values)
+    print(test_id.shape)
+    print(test_id.columns.values)
 
     #print(train_x.head())

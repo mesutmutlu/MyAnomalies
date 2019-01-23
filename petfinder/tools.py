@@ -7,7 +7,12 @@ from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 from nltk.corpus import stopwords
 import nltk
-
+from sklearn import svm
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+import datetime
+from collections import Counter
+import os
 def create_dict(file, idx, col):
     df = pd.read_csv(file)
     df.set_index(idx, inplace = True)
@@ -106,6 +111,57 @@ def fill_na(arr, cols, val):
     for col in cols:
         arr[col].fillna(val, inplace=True)
     return arr
+
+def detect_outliers(train, rc):
+    print("detecting outliers")
+    if rc == 1 or not(os.path.isfile("outliers.csv")):
+
+        f_train = train.drop(["PetID"], axis=1)
+        id = train["PetID"]
+        n_samples = len(f_train)
+        outliers_fraction = 0.10
+        n_outliers = int(outliers_fraction * n_samples)
+        n_inliers = n_samples - n_outliers
+
+        # define outlier/anomaly detection methods to be compared
+        anomaly_algorithms = [
+            # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
+            ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
+                                              gamma=0.1)),
+            ("Isolation Forest", IsolationForest(behaviour='new',
+                                                 contamination=outliers_fraction,
+                                                 random_state=42)),
+            ("Local Outlier Factor", LocalOutlierFactor(
+                n_neighbors=35, contamination=outliers_fraction))]
+
+        # Define datasets
+        #print(f_train.head())
+        df_pred = pd.DataFrame(columns=["One-Class SVM","Isolation Forest","Local Outlier Factor"])
+        if 1 == 1 :
+            for name, algorithm in anomaly_algorithms:
+                #t0 = time.time()
+                # algorithm.fit(f_train)
+                print(name, datetime.datetime.now())
+                #t1 = time.time()
+
+                # fit the data and tag outliers
+                if name == "Local Outlier Factor":
+                    y_pred = algorithm.fit_predict(f_train)
+                else:
+                    y_pred = algorithm.fit(f_train).predict(f_train)
+
+                #print(name, y_pred)
+                df_pred[name] = y_pred
+                #print(df_pred)
+
+        df_pred["outlier"] = df_pred.apply(lambda x: Counter([x['One-Class SVM'], x['Isolation Forest'], x["Local Outlier Factor"]]).most_common(1)[0][0], axis=1)
+
+        prediction_df = pd.concat([id,df_pred], axis=1)
+
+        # create submission file print(prediction_df)
+        prediction_df.to_csv("outliers.csv")
+    prediction_df = pd.read_csv("outliers.csv")
+    return prediction_df["outlier"]
 
 if __name__ == "__main__":
 

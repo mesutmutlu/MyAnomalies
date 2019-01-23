@@ -6,6 +6,7 @@ import sys
 from nltk.corpus import stopwords
 import numpy as np
 import pandas as pd
+from collections import Counter
 
 
 if __name__ == "__main__":
@@ -13,7 +14,11 @@ if __name__ == "__main__":
     x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
 
     pd = pd.DataFrame(data =[1.3, 0.7, 0.8, 1.9, 1.2])
-    print(pd)
+    #print(pd)
+
+    print(Counter([1,1,-1]).most_common(1)[0][0])
+    print(Counter([1, -1, -1]).most_common(1)[0][0])
+
     sys.exit()
     x1 = [1, 1, 1, 1, 1]
 

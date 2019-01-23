@@ -16,6 +16,7 @@ import sys
 from sklearn.ensemble import VotingClassifier
 import datetime
 from collections import Counter
+from statistics import mean
 
 print(__doc__)
 
@@ -44,7 +45,9 @@ def MD_detectOutliers(data):
     df_outliers = pd.DataFrame(data=outliers)
     df_outliers.to_csv("mala.csv", delimiter=",")
 
-def detect_outliers(f_train, id):
+def detect_outliers(train):
+    f_train = train.drop(["PetID"], axis=1)
+    id = train["PetID"]
     n_samples = len(f_train)
     outliers_fraction = 0.10
     n_outliers = int(outliers_fraction * n_samples)
@@ -55,7 +58,7 @@ def detect_outliers(f_train, id):
         # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
         ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
                                           gamma=0.1)),
-        ("Isolation Forest", IsolationForest(#behaviour='new',
+        ("Isolation Forest", IsolationForest(behaviour='new',
                                              contamination=outliers_fraction,
                                              random_state=42)),
         ("Local Outlier Factor", LocalOutlierFactor(
@@ -80,30 +83,30 @@ def detect_outliers(f_train, id):
             #print(name, y_pred)
             df_pred[name] = y_pred
             #print(df_pred)
-    if 1 == 0:
-        clf = VotingClassifier(estimators=anomaly_algorithms, voting='soft')
-        y_pred = clf.fit(f_train, y=None).predict(f_train)
-        # print(test_id.shape, pred.shape)
-    for index, row in df_pred.iterrows():
 
-        df_pred["final_class"] = Counter(row[["One-Class SVM","Isolation Forest","Local Outlier Factor"]].values.ravel()).most_common(1)[0][0]
+    df_pred["outlier"] = df_pred.apply(lambda x: Counter([x['One-Class SVM'], x['Isolation Forest'], x["Local Outlier Factor"]]).most_common(1)[0][0], axis=1)
 
     prediction_df = pd.concat([id,df_pred], axis=1)
 
     # create submission file print(prediction_df)
+    prediction_df.to_csv("outliers.csv")
     return prediction_df
+
+def predict_out(arr):
+
+    if mean(arr) <0:
+        return -1
+    else:
+        return 1
+
 if __name__ == "__main__":
-    L = [1, 2, 45, 55, 5, 4, 4, 4, 4, 4, 4, 5456, 56, 6, 7, 67]
-    print(Counter(L).most_common(1)[0][0])
-    most_common, num_most_common = Counter(L).most_common(1)[0]  # 4, 6 times
 
     train, test = read_data()
-
     x_train, y_train, x_test, id_test = prepare_data(train, test)
 
     f_train = pd.concat([x_train, y_train], axis=1)
 
     #print(f_train.values)
     #print(f_train.columns.values)
-    pred = detect_outliers(f_train.drop(["PetID"], axis=1), f_train["PetID"])
+    pred = detect_outliers(f_train)
     print(pred)
