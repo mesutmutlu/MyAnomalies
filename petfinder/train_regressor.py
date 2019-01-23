@@ -220,26 +220,10 @@ def run_cv_model(train, test, target, model_fn, params={}, eval_fn=None, label='
                'coefficients': all_coefficients}
     return results
 
-params = {'application': 'regression',
-          'boosting': 'gbdt',
-          'metric': 'rmse',
-          'num_leaves': 80,
-          'max_depth': 9,
-          'learning_rate': 0.01,
-          'bagging_fraction': 0.85,
-          'feature_fraction': 0.8,
-          'min_split_gain': 0.01,
-          'min_child_samples': 150,
-          'min_child_weight': 0.1,
-          'verbosity': -1,
-          'data_random_seed': 3,
-          'early_stop': 100,
-          'verbose_eval': 100,
-          'num_rounds': 10000,
-          'lambda_l2': 0.05}
-
 def runLGB(train_X, train_y, test_X, test_y, test_X2, params):
     #print('Prep LGB')
+    #cols = Columns.ind_num_cat_columns.value
+    #cols.remove("RescuerID")
     d_train = lgb.Dataset(train_X, label=train_y)
     d_valid = lgb.Dataset(test_X, label=test_y)
     watchlist = [d_train, d_valid]
@@ -339,6 +323,7 @@ if __name__ == "__main__":
 
     train, test = read_data()
     x_train, y_train, x_test, id_test = prepare_data(train, test)
+    print(x_train.columns.values)
     if 1 == 1:
         params = {'application': 'regression',
                   'boosting': 'gbdt',
@@ -357,36 +342,38 @@ if __name__ == "__main__":
                   'verbose_eval': False,
                   'n_jobs': 4,
                   # 'lambda_l2': 0.05,
-                  'num_rounds': 10000}
-        print("with all columns", datetime.datetime.now())
-        x_train_a = x_train
-        x_test_a = x_test
-        submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-
-        cols = Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
-        for c in cols:
-            print("without" + c, datetime.datetime.now())
-            x_train_a = x_train.drop([c], axis=1)
-            x_test_a = x_test.drop([c], axis=1)
-            submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
+                  'num_rounds': 10000,
+                  #'categorical_feature':Columns.ind_num_cat_columns.value
+                  }
+        # print("with all columns", datetime.datetime.now())
+        # x_train_a = x_train
+        # x_test_a = x_test
+        # submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
+        #
+        # cols = Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
+        # for c in cols:
+        #     print("without" + c, datetime.datetime.now())
+        #     x_train_a = x_train.drop([c], axis=1)
+        #     x_test_a = x_test.drop([c], axis=1)
+        #     submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
 
         print("without img_num_cols_1", datetime.datetime.now())
-        x_train_a = x_train.drop([Columns.img_num_cols_1.value], axis=1)
-        x_test_a = x_test.drop([Columns.img_num_cols_1.value], axis=1)
+        x_train_a = x_train.drop(Columns.img_num_cols_1.value, axis=1)
+        x_test_a = x_test.drop(Columns.img_num_cols_1.value, axis=1)
         submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
 
         print("without img_num_cols_2", datetime.datetime.now())
-        x_train_a = x_train.drop([Columns.img_num_cols_2.value], axis=1)
-        x_test_a = x_test.drop([Columns.img_num_cols_2.value], axis=1)
+        x_train_a = x_train.drop(Columns.img_num_cols_2.value, axis=1)
+        x_test_a = x_test.drop(Columns.img_num_cols_2.value, axis=1)
         submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
 
         print("without img_num_cols_3", datetime.datetime.now())
-        x_train_a = x_train.drop([Columns.img_num_cols_3.value], axis=1)
-        x_test_a = x_test.drop([Columns.img_num_cols_3.value], axis=1)
+        x_train_a = x_train.drop(Columns.img_num_cols_3.value, axis=1)
+        x_test_a = x_test.drop(Columns.img_num_cols_3.value, axis=1)
         submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
 
         print("without iann_cols", datetime.datetime.now())
-        x_train_a = x_train.drop([Columns.iann_cols.value], axis=1)
-        x_test_a = x_test.drop([Columns.iann_cols.value], axis=1)
+        x_train_a = x_train.drop(Columns.iann_cols.value, axis=1)
+        x_test_a = x_test.drop(Columns.iann_cols.value, axis=1)
         submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
         print("ended", datetime.datetime.now())
