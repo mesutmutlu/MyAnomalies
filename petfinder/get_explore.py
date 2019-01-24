@@ -236,9 +236,10 @@ if __name__ == "__main__":
     train, test = read_data()
     #print(h.sort_values(by=['count', 'mean'],ascending=False))
 
-    ax = sns.scatterplot(x="Fee", y="Age", hue="AdoptionSpeed", data=train)
-    plt.show()
+    #ax = sns.scatterplot(x="Fee", y="Age", hue="AdoptionSpeed", data=train)
+    #plt.show()
 
+    print(train.groupby(['State']).agg({'PetID': ['count'], 'AdoptionSpeed': ['mean']}).reset_index())
     h = train.groupby(['RescuerID','Type']).agg({'PetID':['count'],'AdoptionSpeed':['mean']}).reset_index()
 
     h.columns = h.columns.droplevel()

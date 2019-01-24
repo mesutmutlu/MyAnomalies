@@ -34,6 +34,26 @@ def rescuerType(df):
     #train_r.columns = ["RescuerID", "Count"]
     return train_r[["RescuerID", "RescuerType"]]
 
+def setStateAdoptionSpeed(val):
+    if val >= 3:
+        return 3
+    elif val > 2.5:
+        return 2
+    elif val > 2:
+        return 1
+    else:
+        return 0
+
+def stateAdoptionSpeed(df):
+    train_r = df.groupby(['State'])["AdoptionSpeed"].mean().reset_index()
+    train_r["StateAdoptionSpeed"] = train_r.apply(lambda x: setStateAdoptionSpeed(x['AdoptionSpeed']), axis=1)
+    return train_r[["State", "StateAdoptionSpeed"]]
+
+def quantile_bin(df, col):
+    quantile_list = [0, .25, .5, .75, 1.]
+    quantiles = df[col].quantile(quantile_list)
+    return quantiles
+
 
 def prepare_data(train, test):
 
@@ -58,6 +78,13 @@ def prepare_data(train, test):
     train["DescMagnitude"].fillna(0, inplace=True)
     test["DescScore"].fillna(0, inplace=True)
     test["DescMagnitude"].fillna(0, inplace=True)
+    print("quantile binning fee")
+
+    # print("setting state adoption mean")
+    # df_ast = stateAdoptionSpeed(train)
+    # train = train.set_index("State").join(df_ast.set_index("State")).reset_index()
+    # #df_rts = stateAdoptionSpeed(test)
+    # test = test.set_index("State").join(df_ast.set_index("State")).reset_index()
     print("defining rescuer type")
     df_rtt = rescuerType(train)
     train = train.set_index("RescuerID").join(df_rtt.set_index("RescuerID")).reset_index()
@@ -94,13 +121,16 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     train, test = read_data()
-
-    pdf = rescuerType(train)
-    pdf.hist()
+    #pdf = stateAdoptionSpeed(train)
+    #print(pdf)
+    #sys.exit()
+    #pdf.hist()
     #plt.show()
     #tfidf(train, test)
     #sys.exit()
     train_x, train_y, test_x, test_id = prepare_data(train,test)
+    print(train_x.head())
+    print(test_x.head())
     sys.exit()
     #print(train_x.columns.values)
     #print(test_x.columns.values)
