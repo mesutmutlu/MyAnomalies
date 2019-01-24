@@ -171,7 +171,7 @@ def get_img_meta(type, img_num, recalc):
             cols = Columns.iden_columns.value + Columns.img_num_cols_3.value + Columns.img_lbl_cols_3.value
             df_imgs = pd.DataFrame(columns=cols)
         else:
-            print("This function supports images until 3rd, so img_num should be <= 3")
+            print("This function supports images until 3rd, so img_num should be < = 3")
             return False
 
         print("Getting image analyse metadata for", type, img_num, "files")
