@@ -86,10 +86,14 @@ class Columns(Enum):
     n_iann_svdcomp = 50
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
 
-
-
+    @staticmethod
+    def list(t):
+        #return list(map(lambda c: c.value, filter(lambda x: x*2/6. != 1, range(5))))
+        print([name for name, member in Columns.__members__.items() if member.name == t])
+        print(Columns.value.__name__)
 
 def read_data():
+
     train = pd.read_csv(Paths.base.value+"train/train.csv")
     test = pd.read_csv(Paths.base.value+"test/test.csv")
 
@@ -230,6 +234,8 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+    print(Columns.list("n_img_anl"))
+    sys.exit()
     #train, test = read_data()
     #print(train.corr())
     #print(sys.platform)
