@@ -13,21 +13,40 @@ from petfinder.get_explore import read_data
 from sklearn.preprocessing import LabelEncoder
 from enum import Enum
 from petfinder.get_explore import Columns, Paths
-from petfinder.tools import tfidf, label_encoder, scale_num_var, tfidf_2, detect_outliers
+from petfinder.tools import  label_encoder, scale_num_var, tfidf_2, detect_outliers
 import os
+
+def setRescuerType(val):
+    if val >= 10:
+        return 3
+    elif val > 5:
+        return 2
+    elif val > 1:
+        return 1
+    else:
+        return 0
+
+def rescuerType(df):
+    train_r = df.groupby(['RescuerID'])["PetID"].count().reset_index()
+    #train_r.columns = train_r.columns.droplevel()
+    # print(h.sort_values(by=['count'],ascending=False))
+    train_r["RescuerType"] = train_r.apply(lambda x: setRescuerType(x['PetID']), axis=1)
+    #train_r.columns = ["RescuerID", "Count"]
+    return train_r[["RescuerID", "RescuerType"]]
 
 
 def prepare_data(train, test):
+
     train["Description"].fillna("", inplace=True)
-    svd_train_desc = tfidf_2(train["Description"], 70, Columns.desc_cols.value)
+    svd_train_desc = tfidf_2(train["Description"], Columns.n_desc_svdcomp.value, Columns.desc_cols.value)
     train["Lbl_Dsc"].fillna("", inplace=True)
-    svd_train_lbldsc = tfidf_2(train["Lbl_Dsc"], 5, Columns.iann_cols.value)
+    svd_train_lbldsc = tfidf_2(train["Lbl_Dsc"], Columns.n_iann_svdcomp.value, Columns.iann_cols.value)
     train = pd.concat([train, svd_train_desc, svd_train_lbldsc], axis=1)
 
     test["Description"].fillna("", inplace=True)
-    svd_test_desc = tfidf_2(test["Description"], 70, Columns.desc_cols.value)
+    svd_test_desc = tfidf_2(test["Description"], Columns.n_desc_svdcomp.value, Columns.desc_cols.value)
     test["Lbl_Dsc"].fillna("", inplace=True)
-    svd_test_lbldsc = tfidf_2(test["Lbl_Dsc"], 5, Columns.iann_cols.value)
+    svd_test_lbldsc = tfidf_2(test["Lbl_Dsc"], Columns.n_iann_svdcomp.value, Columns.iann_cols.value)
     test = pd.concat([test, svd_test_desc, svd_test_lbldsc], axis=1)
     train["Name"].fillna("", inplace=True)
     test["Name"].fillna("", inplace=True)
@@ -39,7 +58,11 @@ def prepare_data(train, test):
     train["DescMagnitude"].fillna(0, inplace=True)
     test["DescScore"].fillna(0, inplace=True)
     test["DescMagnitude"].fillna(0, inplace=True)
-
+    print("defining rescuer type")
+    df_rtt = rescuerType(train)
+    train = train.set_index("RescuerID").join(df_rtt.set_index("RescuerID")).reset_index()
+    df_rts = rescuerType(test)
+    test = test.set_index("RescuerID").join(df_rts.set_index("RescuerID")).reset_index()
     print("rescuerid encoding")
     enc = LabelEncoder()
     train["RescuerID"] = enc.fit_transform(train["RescuerID"])
@@ -71,8 +94,20 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     train, test = read_data()
+
+    pdf = rescuerType(train)
+    pdf.hist()
+    #plt.show()
     #tfidf(train, test)
+    #sys.exit()
     train_x, train_y, test_x, test_id = prepare_data(train,test)
+    sys.exit()
+    #print(train_x.columns.values)
+    #print(test_x.columns.values)
+    data = pd.concat([train_x, train_y], axis=1)
+    print(data[data["AdoptionSpeed"] == 2])
+    ax = sns.scatterplot(x="DescLength", y="DescScore", hue="AdoptionSpeed", data=data[data["AdoptionSpeed"] == 2])
+    plt.show()
     print(train_x.shape)
     print(train_x.columns.values)
     print(train_y.shape)
