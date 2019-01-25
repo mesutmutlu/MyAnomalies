@@ -23,10 +23,11 @@ def create_dict(file, idx, col):
 
 def tfidf_2(train, n_comp, out_cols):
     print("starting tfidf")
+    #train.replace("", "none")
     stop_words = set(stopwords.words('english'))
-    tfv = TfidfVectorizer(min_df=2, max_features=None,
+    tfv = TfidfVectorizer(min_df=3, max_features=10000,
                           strip_accents='unicode', analyzer='word', token_pattern=r'\w{1,}',
-                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1, stop_words=stop_words)
+                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1, stop_words = 'english')
 
     # Fit TFIDF
     tfv.fit(list(train))

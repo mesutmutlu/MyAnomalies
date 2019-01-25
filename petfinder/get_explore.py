@@ -70,7 +70,7 @@ class Columns(Enum):
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
-    n_desc_svdcomp = 400
+    n_desc_svdcomp = 120
     desc_cols = ["desc_svd_" + str(i) for i in range(n_desc_svdcomp)]
     img_num_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
                 "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Scr_1",]
@@ -83,7 +83,7 @@ class Columns(Enum):
     img_lbl_cols_3 = ["Lbl_Img_3"]
     img_lbl_col = ["Lbl_Dsc"]
     n_img_anl = 3
-    n_iann_svdcomp = 50
+    n_iann_svdcomp = 3
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
 
     @staticmethod
@@ -234,8 +234,6 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    print(Columns.list("n_img_anl"))
-    sys.exit()
     #train, test = read_data()
     #print(train.corr())
     #print(sys.platform)
@@ -244,32 +242,12 @@ if __name__ == "__main__":
 
     #ax = sns.scatterplot(x="Fee", y="Age", hue="AdoptionSpeed", data=train)
     #plt.show()
-
-    print(train.groupby(['State']).agg({'PetID': ['count'], 'AdoptionSpeed': ['mean']}).reset_index())
-    h = train.groupby(['RescuerID','Type']).agg({'PetID':['count'],'AdoptionSpeed':['mean']}).reset_index()
-
-    h.columns = h.columns.droplevel()
-    #print(h.sort_values(by=['count'],ascending=False))
-    print(h.columns.values)
-    h.columns = ["RescuerID", "Type", "PetID Count", "AdoptionSpeed Mean"]
-    print(h[h["Type"]==0])
-    ax = sns.scatterplot(x="PetID Count", y="AdoptionSpeed Mean", hue="Type",data=h)
-    plt.show()
-
-    sys.exit()
-    #print(train.head())
-    #x = pd.read_csv(Paths.base.value + "train_metadata/train_metadata.csv")
-    #print(x.head())
-    get_img_meta(train, 1)
-
-   # print(train.head())
-    sys.exit()
-    print(train.describe(include="all"))
-    #print(train.values.reshape())
-    print(train.sort_values(by="Age", ascending=False))
-    print(train.sort_values(by="Age", ascending=False)[:5])
-    #print(test)
-
+    h = train[['RescuerID','PetID']].groupby(['RescuerID']).count().reset_index()
+    h2 = test[['RescuerID','PetID']].groupby(['RescuerID']).count().reset_index()
+    #print(h)
+    print(h.sort_values(by=["PetID"], ascending=False))
+    print(h2.sort_values(by=["PetID"], ascending=False))
+    pd.concat([h,h2]).to_csv("numbers.csv")
 
 
 

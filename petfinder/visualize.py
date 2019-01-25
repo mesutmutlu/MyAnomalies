@@ -100,9 +100,9 @@ def num_boxp(arr, cols):
         mpl.rcParams['ytick.labelsize'] = 10
         f, axes = plt.subplots(1, 3, figsize=[16, 9])
         f.suptitle(col +' by AdopSp.')
-        ax1 = sns.catplot(x="AdoptionSpeed", y=col, data=arr, kind="violin", ax=axes[0], col="Type")
-        ax2 = sns.catplot(x="AdoptionSpeed", y=col, data=arr[arr["Type"] == 1], kind="violin", ax=axes[1], col="Type")
-        ax3 = sns.catplot(x="AdoptionSpeed", y=col, data=arr[arr["Type"] == 2], kind="violin", ax=axes[2], col="Type")
+        ax1 = sns.boxplot(x="AdoptionSpeed", y=col, data=arr, ax=axes[0])
+        ax2 = sns.boxplot(x="AdoptionSpeed", y=col, data=arr[arr["Type"] == 1], ax=axes[1])
+        ax3 = sns.boxplot(x="AdoptionSpeed", y=col, data=arr[arr["Type"] == 2], ax=axes[2])
         axes[0].set_title(" For All")
         axes[1].set_title(" For Dogs")
         axes[2].set_title(" For Cats")
@@ -129,12 +129,4 @@ if __name__ == "__main__":
 
     num_boxp(pd.concat([x_train, y_train], axis = 1), Columns.ind_cont_columns.value)
 
-
-
-    cols = Columns.ind_num_cat_columns.value
-    if "RescuerID" in cols:
-        cols.remove("RescuerID")
-    #check_cat_perc(pd.concat([x_train, y_train], axis=1, sort=False), cols)
-    #check_num_dist(pd.concat([x_train, y_train], axis = 1), Columns.ind_cont_columns.value)
-    num_boxp(pd.concat([x_train, y_train], axis = 1), Columns.ind_cont_columns.value)
 
