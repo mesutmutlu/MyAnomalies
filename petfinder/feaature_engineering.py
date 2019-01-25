@@ -34,9 +34,9 @@ if __name__ == "__main__":
         t1 = time()
         print("circles, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
         print(Y)
-        data = pd.concat([Y, y_train], axis=1)
+        data = pd.concat([Y, y_train.values], axis=1)
         print(data)
         #ax.set_title("Perplexity=%d" % perplexity)
-        #sns.scatterplot(x=data[0], y=data[1], hue="AdoptionSpeed",  data=data, ax=ax[0,i])
+        sns.scatterplot(x=data[0], y=data[1], hue="AdoptionSpeed",  data=data, ax=ax[0,i])
 
         #ax.axis('tight')
