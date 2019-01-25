@@ -5,6 +5,7 @@ from time import time
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import datetime
 
 def tsne():
     pass
@@ -24,12 +25,16 @@ if __name__ == "__main__":
         #ax = subplots[0][i + 1]
 
         t0 = time()
+        print(datetime.datetime.now())
         tsne = manifold.TSNE(n_components=2, init='random',
                              random_state=0, perplexity=perplexity)
+        print(datetime.datetime.now())
         Y = tsne.fit_transform(x_train)
+        print(datetime.datetime.now())
         t1 = time()
         print("circles, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
-        data = pd.concat([tsne, y_train], axis=1)
+        print(Y)
+        data = pd.concat([Y, y_train], axis=1)
         print(data)
         #ax.set_title("Perplexity=%d" % perplexity)
         #sns.scatterplot(x=data[0], y=data[1], hue="AdoptionSpeed",  data=data, ax=ax[0,i])

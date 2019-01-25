@@ -34,6 +34,23 @@ def rescuerType(df):
     #train_r.columns = ["RescuerID", "Count"]
     return train_r[["RescuerID", "RescuerType"]]
 
+def setMeanAdoptionSpeed(val):
+    if val >= 3.2:
+        return 4
+    elif val > 2.5:
+        return 3
+    elif val > 2:
+        return 2
+    elif val > 1:
+        return 1
+    else:
+        return 0
+
+def meanAdoptionSpeed(df, col):
+    train_r = df.groupby([col])["AdoptionSpeed"].mean().reset_index()
+    train_r[col+"AdoptionSpeed"] = train_r.apply(lambda x: setMeanAdoptionSpeed(x['AdoptionSpeed']), axis=1)
+    return train_r[[col, col+"AdoptionSpeed"]]
+
 def setStateAdoptionSpeed(val):
     if val >= 3:
         return 3
@@ -121,13 +138,14 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     train, test = read_data()
-    #pdf = stateAdoptionSpeed(train)
-    #print(pdf)
+    pdf = meanAdoptionSpeed(train, "Breed1")
+    print(pdf)
     #sys.exit()
     #pdf.hist()
     #plt.show()
     #tfidf(train, test)
     #sys.exit()
+    sys.exit()
     train_x, train_y, test_x, test_id = prepare_data(train,test)
     print(train_x.head())
     print(test_x.head())
