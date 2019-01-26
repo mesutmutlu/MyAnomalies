@@ -66,7 +66,7 @@ def fill_na(arr, cols, val):
 
 def detect_outliers(train, rc):
     print("detecting outliers")
-    if rc == 1 or not(os.path.isfile("outliers.csv")):
+    if rc == 1 or not(os.path.isfile(Paths.base.value + "outliers.csv")):
 
         f_train = train.drop(["PetID"], axis=1)
         id = train["PetID"]
@@ -76,11 +76,12 @@ def detect_outliers(train, rc):
         n_inliers = n_samples - n_outliers
 
         # define outlier/anomaly detection methods to be compared
+
         anomaly_algorithms = [
             # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
             ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
                                               gamma=0.1)),
-            ("Isolation Forest", IsolationForest(behaviour='new',
+            ("Isolation Forest", IsolationForest(#behaviour='new',
                                                  contamination=outliers_fraction,
                                                  random_state=42)),
             ("Local Outlier Factor", LocalOutlierFactor(
@@ -111,8 +112,8 @@ def detect_outliers(train, rc):
         prediction_df = pd.concat([id,df_pred], axis=1)
 
         # create submission file print(prediction_df)
-        prediction_df.to_csv("outliers.csv")
-    prediction_df = pd.read_csv("outliers.csv")
+        prediction_df.to_csv(Paths.base.value + "outliers.csv")
+    prediction_df = pd.read_csv(Paths.base.value + "outliers.csv")
     return prediction_df["outlier"]
 
 if __name__ == "__main__":
