@@ -13,6 +13,10 @@ from sklearn.neighbors import LocalOutlierFactor
 import datetime
 from collections import Counter
 import os
+
+def plog(msg):
+    print(datetime.datetime.now(), msg)
+
 def create_dict(file, idx, col):
     df = pd.read_csv(file)
     df.set_index(idx, inplace = True)

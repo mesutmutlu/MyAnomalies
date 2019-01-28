@@ -2,57 +2,9 @@ import pandas as pd
 import seaborn as sns
 import sys
 import matplotlib.pyplot as plt
-from sklearn.feature_selection import chi2 as sk_chi, SelectKBest
-from scipy.stats import chi2_contingency
-from scipy.stats import chi2
-from scipy.stats import entropy
-import numpy as np
-from collections import Counter
-import math
 import os
 import json
-from scipy.stats import ttest_ind, f_oneway, normaltest, ks_2samp
 from enum import Enum
-from sklearn.base import BaseEstimator
-#from petfinder.preprocessing import prepare_data
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import BaggingClassifier
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import IsolationForest
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import VotingClassifier
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import LogisticRegressionCV
-from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.linear_model import RidgeClassifier
-from sklearn.linear_model import RidgeClassifierCV
-from sklearn.linear_model import SGDClassifier
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.naive_bayes import GaussianNB
-#from sklearn.naive_bayes import ComplementNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neighbors import RadiusNeighborsClassifier
-from sklearn.neighbors import NearestCentroid
-from sklearn.neural_network import MLPClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.tree import ExtraTreeClassifier
-from sklearn.svm import LinearSVC
-from sklearn.svm import NuSVC
-from sklearn.svm import SVC
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.decomposition import PCA
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-import xgboost as xgb
-import lightgbm as lgb
-import scipy as sp
 
 
 class Paths(Enum):
@@ -81,7 +33,7 @@ class Columns(Enum):
     img_lbl_cols_1 = ["Lbl_Img_1"]
     img_lbl_cols_2 = ["Lbl_Img_2"]
     img_lbl_cols_3 = ["Lbl_Img_3"]
-    img_lbl_col = ["Lbl_Dsc"]
+    img_lbl_col = ["Lbl_Img"]
     n_img_anl = 3
     n_iann_svdcomp = 3
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
@@ -116,11 +68,8 @@ def read_data():
     test_metadata = test_metadata_1.set_index("PetID").join(test_metadata_2.set_index("PetID")).join(
         test_metadata_3.set_index("PetID")).reset_index()
 
-    train_metadata["Lbl_Dsc"] = train_metadata["Lbl_Img_1"] + train_metadata["Lbl_Img_2"] + train_metadata["Lbl_Img_3"]
-    test_metadata["Lbl_Dsc"] = test_metadata["Lbl_Img_1"] + test_metadata["Lbl_Img_2"] + test_metadata["Lbl_Img_3"]
-    #print(train.columns.values)
-    #train["Lbl_Dsc"].fillna("none",  inplace=True)
-    #test["Lbl_Dsc"].fillna("none",  inplace=True)
+    train_metadata["Lbl_Img"] = train_metadata["Lbl_Img_1"] + train_metadata["Lbl_Img_2"] + train_metadata["Lbl_Img_3"]
+    test_metadata["Lbl_Img"] = test_metadata["Lbl_Img_1"] + test_metadata["Lbl_Img_2"] + test_metadata["Lbl_Img_3"]
 
     train = train.set_index("PetID").join(train_metadata.set_index("PetID")).reset_index()
     test = test.set_index("PetID").join(test_metadata.set_index("PetID")).reset_index()
