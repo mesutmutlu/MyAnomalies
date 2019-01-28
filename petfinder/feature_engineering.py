@@ -7,6 +7,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import datetime
+import featuretools as ft
+import numpy as np
+import sys
 
 def tsne():
     pass
@@ -32,6 +35,25 @@ def quantile_bin(df, col):
     quantile_list = [0, .25, .5, .75, 1.]
     quantiles = df[col].quantile(quantile_list)
     return quantiles
+
+def auto_features(df, entities):
+    et = {}
+    for e in entities:
+        et[e] = (df[e], e)
+    et["Pets"] = (df, "PetID")
+
+    print(et)
+
+    rel = []
+    for e in entities:
+        rel.append(("Pets", e, e, e),)
+
+    print(rel)
+
+    feature_matrix_customers, features_defs = ft.dfs(entities=et, relationships = rel,
+                                                     target_entity = "Pets")
+
+    print(features_defs)
 
 def add_features(train, test):
     plog("tfidf for train set started")
@@ -63,16 +85,20 @@ def add_features(train, test):
     plog("rescuerType for test created")
 
     plog("outlier detection started")
-    df_o = detect_outliers(train, 0)
+    o_cols = []
+    for oc in Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value + Columns.dep_columns.value +\
+    Columns.desc_cols.value + Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value +\
+    Columns.iann_cols.value:
+        if oc not in ["RescuerID"]:
+            o_cols.append(oc)
+    df_o = detect_outliers(train[o_cols], 1)
     train = pd.concat([train, df_o], axis=1)
     train = train[train["outlier"] == 1]
     plog("outlier detection ended by removing outliers")
 
-    drop_cols = Columns.ind_text_columns.value + Columns.img_lbl_cols_1.value + Columns.img_lbl_cols_2.value + \
-                Columns.img_lbl_cols_3.value + Columns.img_lbl_col.value
-    train.drop(drop_cols, axis=1, inplace=True)
-    test.drop(drop_cols, axis=1, inplace=True)
+    train.drop(["RescuerID"], axis=1, inplace=True)
     train.fillna(-1, inplace=True)
+    test.drop(["RescuerID"], axis=1, inplace=True)
     test.fillna(-1, inplace=True)
 
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
@@ -83,7 +109,7 @@ def add_features(train, test):
                   + Columns.desc_cols.value + Columns.img_num_cols_1.value
                   + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value]
     test_id = test[Columns.iden_columns.value]
-    # train_x, test_x = scale_num_var(train_x, test_x)
+
     return train_x, train_y, test_x, test_id
 
 
@@ -91,6 +117,9 @@ if __name__ == "__main__":
 
     train, test = read_data()
     print(len(train))
+    auto_features(train, ["State", "Breed1", "Breed2"])
+    sys.exit()
+
     x_train, y_train, x_test, id_test = prepare_data(train, test)
     perplexities = [5, 30, 50, 100]
     #(fig, subplots) = plt.subplots(1, 5, figsize=(15, 8))
