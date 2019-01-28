@@ -41,6 +41,7 @@ def auto_features(df, entities):
     for e in entities:
         et[e] = (df[e], e)
     et["Pets"] = (df, "PetID")
+    et = {"state":(df["State"], "State")}
 
     print(et)
 
@@ -49,6 +50,8 @@ def auto_features(df, entities):
         rel.append(("Pets", e, e, e),)
 
     print(rel)
+    es = ft.EntitySet(id='Pets')
+    es.entity_from_dataframe(entity_id='bigmart', dataframe=combi, index='id')
 
     feature_matrix_customers, features_defs = ft.dfs(entities=et, relationships = rel,
                                                      target_entity = "Pets")
@@ -117,7 +120,7 @@ if __name__ == "__main__":
 
     train, test = read_data()
     print(len(train))
-    auto_features(train, ["State", "Breed1", "Breed2"])
+    auto_features(train, ["State"])
     sys.exit()
 
     x_train, y_train, x_test, id_test = prepare_data(train, test)
