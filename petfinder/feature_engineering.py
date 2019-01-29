@@ -185,10 +185,11 @@ if __name__ == "__main__":
 
 
     x_train_wo = x_train.drop(["outlier"], axis=1)
+    print(x_train_wo.shape)
     y_train_wo = y_train.drop(["outlier"], axis=1)
     sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
     x_train_wo2 = sel.fit_transform(x_train_wo)
-    print(x_train_wo2)
+    print(x_train_wo2.shape)
     sys.exit()
 
     autoenc(pd.concat([x_train_wo, y_train_wo], axis=1))
