@@ -25,10 +25,13 @@ class Columns(Enum):
     n_desc_svdcomp = 120
     desc_cols = ["desc_svd_" + str(i) for i in range(n_desc_svdcomp)]
     img_num_cols_1 = ["Vertex_X_1", "Vertex_Y_1", "Bound_Conf_1", "Bound_Imp_Frac_1",
+                      "Dom_Blue_1", "Dom_Green_1", "Dom_Red_1",
                 "RGBint_1", "Dom_Px_Fr_1", "Dom_Scr_1", "Lbl_Scr_1",]
     img_num_cols_2 = ["Vertex_X_2", "Vertex_Y_2", "Bound_Conf_2", "Bound_Imp_Frac_2",
+                      "Dom_Blue_2", "Dom_Green_2", "Dom_Red_2",
                 "RGBint_2", "Dom_Px_Fr_2", "Dom_Scr_2", "Lbl_Scr_2"]
     img_num_cols_3 = ["Vertex_X_3", "Vertex_Y_3", "Bound_Conf_3", "Bound_Imp_Frac_3",
+                      "Dom_Blue_3", "Dom_Green_3", "Dom_Red_3",
                 "RGBint_3", "Dom_Px_Fr_3", "Dom_Scr_3", "Lbl_Scr_3"]
     img_lbl_cols_1 = ["Lbl_Img_1"]
     img_lbl_cols_2 = ["Lbl_Img_2"]
@@ -37,6 +40,29 @@ class Columns(Enum):
     n_img_anl = 3
     n_iann_svdcomp = 3
     iann_cols = ["iann_svd_" + str(i) for i in range(n_iann_svdcomp)]
+    ft_cat_cols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
+                   "Vaccinated", "Dewormed", "Sterilized", "Health", "State",
+                   "FurLength", "MaturitySize"]
+    ft_new_cols = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity"]
+
+
+    def feature_cols():
+        tmp_ft_cols = []
+        for cc in ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
+                       "Vaccinated", "Dewormed", "Sterilized", "Health", "State",
+                       "FurLength", "MaturitySize"]:
+            #print(cc)
+            for a in ["SUM", "STD", "MAX", "SKEW", "MIN", "MEAN", "COUNT"]:
+                #print(a)
+                if a != "COUNT":
+                    for x in ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity"]:
+                        #print(x)
+                        tmp_ft_cols.append(cc+"_"+a+"(Pets."+x+")")
+                else:
+                    tmp_ft_cols.append(cc+"_"+a+"(Pets)")
+        return tmp_ft_cols
+
+    ft_cols = feature_cols()
 
     @staticmethod
     def list(t):
@@ -165,6 +191,7 @@ def get_img_meta(type, img_num, recalc):
                 label_score = -1
 
             df_imgs.loc[i, cols] = [PetID, vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
+                                    dominant_blue, dominant_green, dominant_red,
                                     dominant_pixel_frac, dominant_score, label_score, label_description]
 
             i += 1
@@ -186,6 +213,9 @@ if __name__ == "__main__":
     #train, test = read_data()
     #print(train.corr())
     #print(sys.platform)
+
+    print(Columns.ft_cols.value)
+    sys.exit()
     train, test = read_data()
     #print(h.sort_values(by=['count', 'mean'],ascending=False))
 
