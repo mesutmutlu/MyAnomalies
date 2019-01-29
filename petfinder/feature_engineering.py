@@ -19,6 +19,7 @@ from random import randint
 import pandas as pd
 from keras import regularizers
 from sklearn import preprocessing
+from sklearn.feature_selection import VarianceThreshold
 
 def setRescuerType(val):
     if val >= 10:
@@ -181,8 +182,15 @@ if __name__ == "__main__":
 
     train, test = add_features(train, test)
     x_train, y_train, x_test, id_test = finalize_data(train, test)
+
+
     x_train_wo = x_train.drop(["outlier"], axis=1)
     y_train_wo = y_train.drop(["outlier"], axis=1)
+    sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
+    x_train_wo2 = sel.fit_transform(x_train_wo)
+    print(x_train_wo2)
+    sys.exit()
+
     autoenc(pd.concat([x_train_wo, y_train_wo], axis=1))
     print(x_train.shape)
     print(x_train.columns.values)
