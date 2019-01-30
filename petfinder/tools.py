@@ -31,7 +31,7 @@ def create_dict(file, idx, col):
 
 
 def tfidf_2(train, n_comp, out_cols):
-    print("starting tfidf")
+    #print("starting tfidf")
     #train.replace("", "none")
     stop_words = set(stopwords.words('english'))
     tfv = TfidfVectorizer(min_df=3, max_features=10000,
@@ -74,7 +74,6 @@ def fill_na(arr, cols, val):
     return arr
 
 def detect_outliers(train, rc):
-    print("detecting outliers")
     if rc == 1 or not(os.path.isfile(Paths.base.value + "outliers.csv")):
 
         f_train = train
@@ -86,14 +85,14 @@ def detect_outliers(train, rc):
         # define outlier/anomaly detection methods to be compared
 
         anomaly_algorithms = [
-            # ("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
-            # ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
-            #                                   gamma=0.1)),
+            #("Robust covariance", EllipticEnvelope(contamination=outliers_fraction)),
+            ("One-Class SVM", svm.OneClassSVM(nu=outliers_fraction, kernel="rbf",
+                                           gamma=0.1)),
             ("Isolation Forest", IsolationForest(#behaviour='new',
                                                  contamination=outliers_fraction,
                                                  random_state=42)),
-            # ("Local Outlier Factor", LocalOutlierFactor(
-            #     n_neighbors=35, contamination=outliers_fraction))
+            ("Local Outlier Factor", LocalOutlierFactor(
+                n_neighbors=35, contamination=outliers_fraction))
         ]
 
         # Define datasets
@@ -123,6 +122,7 @@ def detect_outliers(train, rc):
 
         # create submission file print(prediction_df)
         df_pred.to_csv(Paths.base.value + "outliers.csv")
+    else:
         df_pred = pd.read_csv(Paths.base.value + "outliers.csv")
     return df_pred["outlier"]
 
@@ -147,6 +147,31 @@ def auto_features(df, cols, entities):
         df = df.set_index(e).join(fm).reset_index()
 
     return df
+
+def auto_adp_features(train, test, cols, entities):
+
+    df_c = train[cols]
+    es = ft.EntitySet(id='petfinder')
+    es.entity_from_dataframe(entity_id="Pets", dataframe=df_c, index="PetID")
+    ignored_variable =  {}
+    ignored_variable.update({'Pets': entities})
+    for e in entities:
+        print(e)
+
+        es.normalize_entity(base_entity_id='Pets', new_entity_id=e, index=e)
+        feature_matrix, feature_names = ft.dfs(entityset=es,
+                                               target_entity=e,
+                                               max_depth=2,
+                                               verbose=1,
+                                               #n_jobs=3,
+                                               ignore_variables=ignored_variable)
+        fm = feature_matrix.add_prefix(e+"_")
+        print(feature_names)
+        fm.drop([e+"_COUNT(Pets)"], axis = 1, inplace=True)
+        train = train.set_index(e).join(fm).reset_index()
+        test = test.set_index(e).join(fm).reset_index()
+
+    return train, test
 
 def tsne(x_train, y_train):
     perplexities = [5, 30, 50, 100]

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 from enum import Enum
+from sklearn.feature_selection import VarianceThreshold
 
 
 class Paths(Enum):
@@ -15,10 +16,10 @@ class Paths(Enum):
 
 class Columns(Enum):
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity",
-                        "DescScore", "DescMagnitude", "DescLength", "NameLength"]
+                        "FurLength", "MaturitySize", "DescScore", "DescMagnitude",
+                        "DescLength", "NameLength"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID", "RescuerType",
-                           "FurLength", "MaturitySize"]
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State"]
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
@@ -55,7 +56,7 @@ class Columns(Enum):
             for a in ["SUM", "STD", "MAX", "SKEW", "MIN", "MEAN", "COUNT"]:
                 #print(a)
                 if a != "COUNT":
-                    for x in ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity"]:
+                    for x in ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity", "AdoptionSpeed"]:
                         #print(x)
                         tmp_ft_cols.append(cc+"_"+a+"(Pets."+x+")")
                 else:
@@ -63,6 +64,10 @@ class Columns(Enum):
         return tmp_ft_cols
 
     ft_cols = feature_cols()
+    item_type_incols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID",
+                           "FurLength", "MaturitySize"]
+    item_type_cols =  [c + "_Type" for c in item_type_incols]
 
     @staticmethod
     def list(t):
@@ -214,19 +219,8 @@ if __name__ == "__main__":
     #print(train.corr())
     #print(sys.platform)
 
-    print(Columns.ft_cols.value)
-    sys.exit()
     train, test = read_data()
     #print(h.sort_values(by=['count', 'mean'],ascending=False))
-
-    #ax = sns.scatterplot(x="Fee", y="Age", hue="AdoptionSpeed", data=train)
-    #plt.show()
-    h = train[['RescuerID','PetID']].groupby(['RescuerID']).count().reset_index()
-    h2 = test[['RescuerID','PetID']].groupby(['RescuerID']).count().reset_index()
-    #print(h)
-    print(h.sort_values(by=["PetID"], ascending=False))
-    print(h2.sort_values(by=["PetID"], ascending=False))
-    pd.concat([h,h2]).to_csv("numbers.csv")
 
 
 

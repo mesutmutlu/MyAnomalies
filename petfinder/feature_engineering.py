@@ -1,6 +1,6 @@
 from petfinder.get_explore import read_data, Columns, Paths
 from petfinder.preprocessing import prepare_data
-from petfinder.tools import tfidf_2, plog, detect_outliers, auto_features
+from petfinder.tools import tfidf_2, plog, detect_outliers, auto_features, auto_adp_features
 from time import time
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -36,6 +36,38 @@ def rescuerType(df):
     train_r["RescuerType"] = train_r.apply(lambda x: setRescuerType(x['PetID']), axis=1)
     return train_r[["RescuerID", "RescuerType"]]
 
+def setItemType(val):
+    if val >= 10:
+        return 3
+    elif val > 5:
+        return 2
+    elif val > 1:
+        return 1
+    else:
+        return 0
+
+def itemType(df, col):
+    train_r = df.groupby(col)["PetID"].count().reset_index()
+    train_r[col+"_Type"] = train_r.apply(lambda x: setRescuerType(x['PetID']), axis=1)
+    return train_r[[col, col+"_Type"]]
+
+
+def setMeanAdoptionSpeed(val):
+    if val >= 3.2:
+        return 4
+    elif val > 2.5:
+        return 3
+    elif val > 1.5:
+        return 2
+    elif val > 0.5:
+        return 1
+    else:
+        return 0
+
+def meanAdoptionSpeed(df, col):
+    train_r = df.groupby([col])["AdoptionSpeed"].mean().reset_index()
+    train_r[col+"_mADP"] = train_r.apply(lambda x: setMeanAdoptionSpeed(x['AdoptionSpeed']), axis=1)
+    return train_r[[col, col+"_mADP"]]
 
 def quantile_bin(df, col):
     quantile_list = [0, .25, .5, .75, 1.]
@@ -119,47 +151,63 @@ def add_features(train, test):
     test["DescLength"] = test["Description"].str.len()
     test["NameLength"] = test["Description"].str.len()
     plog("Setted length of description and name on train and test")
+    train.drop(["Description", "Name", "Lbl_Img"], axis=1, inplace=True)
+    test.drop(["Description", "Name", "Lbl_Img"], axis=1, inplace=True)
 
-    plog("creating rescuerType for train")
-    df_rtt = rescuerType(train)
-    train = train.set_index("RescuerID").join(df_rtt.set_index("RescuerID")).reset_index()
-    plog("rescuerType for train created")
 
-    plog("creating rescuerType for test")
-    df_rts = rescuerType(test)
-    test = test.set_index("RescuerID").join(df_rts.set_index("RescuerID")).reset_index()
-    plog("rescuerType for test created")
+    for c in Columns.item_type_incols.value:
+        plog("Creating "+c+"_Type for train on "+ c)
+        df_itr = itemType(train, c)
+        train = train.set_index(c).join(df_itr.set_index(c)).reset_index()
+        plog("Created "+c+"_Type for train on " + c)
+        plog("Creating "+c+"_Type for test on "+ c)
+        df_its = itemType(test, c)
+        test = test.set_index(c).join(df_its.set_index(c)).reset_index()
+        plog("Created "+c+"_Type for test on " + c)
+
 
     plog("creating new features on train using featuretools")
-    train = auto_features(train, Columns.ft_cat_cols.value + Columns.ft_new_cols.value, Columns.ft_cat_cols.value)
+    train = auto_features(train,
+                          Columns.ft_cat_cols.value + Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                          Columns.ft_cat_cols.value)
     plog("created new features on train using featuretools")
 
     plog("creating new features on test using featuretools")
-    test = auto_features(test, Columns.ft_cat_cols.value + Columns.ft_new_cols.value, Columns.ft_cat_cols.value)
+    test = auto_features(test,
+                         Columns.ft_cat_cols.value + Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                         Columns.ft_cat_cols.value)
     plog("created new features on test using featuretools")
+
+    plog("creating adoptionspeed based new features on train and test using featuretools")
+    train, test = auto_adp_features(train, test,
+                                    Columns.ft_cat_cols.value + Columns.item_type_cols.value + ["AdoptionSpeed"],
+                                    Columns.ft_cat_cols.value)
+    plog("Created adoptionspeed based new features on train and test using featuretools")
+
+    train.drop(["RescuerID"], axis=1, inplace=True)
+    test.drop(["RescuerID"], axis=1, inplace=True)
 
     train.fillna(-1, inplace=True)
     test.fillna(-1, inplace=True)
-
-    plog("outlier detection started on train")
-    o_cols = []
-    for oc in Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value + Columns.dep_columns.value +\
-    Columns.desc_cols.value + Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value +\
-    Columns.iann_cols.value + Columns.ft_cols.value:
-        if oc not in ["RescuerID"]:
-            o_cols.append(oc)
-    df_o = detect_outliers(train[o_cols], 1)
-    train = pd.concat([train, df_o], axis=1)
-    plog("outlier detection ended by removing outliers on train")
+    print(train.shape)
+    print(train.columns.values)
+    print(test.shape)
+    print(test.columns.values)
     return train, test
+
+def filter_by_varth(train, test, threshold):
+    vt = VarianceThreshold(threshold=threshold)
+    vt.fit(train)
+    indices = vt.get_support(indices=True)
+    return(train.iloc[:,indices], test.iloc[:,indices])
 
 def finalize_data(train, test):
 
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
                     + Columns.desc_cols.value + Columns.img_num_cols_1.value
                     + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value
-                    + Columns.ft_cols.value + ["outlier"]]
-    train_y = train[Columns.dep_columns.value + ["outlier"]]
+                    + Columns.ft_cols.value]
+    train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
                   + Columns.desc_cols.value + Columns.img_num_cols_1.value
                   + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value
@@ -180,19 +228,11 @@ if __name__ == "__main__":
     train, test = read_data()
     train, test = prepare_data(train, test)
 
+
+
     train, test = add_features(train, test)
     x_train, y_train, x_test, id_test = finalize_data(train, test)
 
-
-    x_train_wo = x_train.drop(["outlier"], axis=1)
-    print(x_train_wo.shape)
-    y_train_wo = y_train.drop(["outlier"], axis=1)
-    sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
-    x_train_wo2 = sel.fit_transform(x_train_wo)
-    print(x_train_wo2.shape)
-    sys.exit()
-
-    autoenc(pd.concat([x_train_wo, y_train_wo], axis=1))
     print(x_train.shape)
     print(x_train.columns.values)
     print(y_train.shape)
