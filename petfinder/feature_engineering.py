@@ -151,9 +151,9 @@ def add_features(train, test):
     test["DescLength"] = test["Description"].str.len()
     test["NameLength"] = test["Description"].str.len()
     plog("Setted length of description and name on train and test")
-    train.drop(["Description", "Name", "Lbl_Img"], axis=1, inplace=True)
-    test.drop(["Description", "Name", "Lbl_Img"], axis=1, inplace=True)
 
+    train.drop(["Description", "Name"], axis=1, inplace=True)
+    test.drop(["Description", "Name"], axis=1, inplace=True)
 
     for c in Columns.item_type_incols.value:
         plog("Creating "+c+"_Type for train on "+ c)
@@ -168,20 +168,23 @@ def add_features(train, test):
 
     plog("creating new features on train using featuretools")
     train = auto_features(train,
-                          Columns.ft_cat_cols.value + Columns.item_type_cols.value + Columns.ft_new_cols.value,
-                          Columns.ft_cat_cols.value)
+                          Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                          Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                          Columns.item_type_cols.value + Columns.ft_cat_cols.value)
     plog("created new features on train using featuretools")
 
     plog("creating new features on test using featuretools")
     test = auto_features(test,
-                         Columns.ft_cat_cols.value + Columns.item_type_cols.value + Columns.ft_new_cols.value,
-                         Columns.ft_cat_cols.value)
+                         Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                         Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                         Columns.item_type_cols.value + Columns.ft_cat_cols.value)
     plog("created new features on test using featuretools")
 
     plog("creating adoptionspeed based new features on train and test using featuretools")
     train, test = auto_adp_features(train, test,
-                                    Columns.ft_cat_cols.value + Columns.item_type_cols.value + ["AdoptionSpeed"],
-                                    Columns.ft_cat_cols.value)
+                                    Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                                    Columns.item_type_cols.value + ["AdoptionSpeed"],
+                                    Columns.item_type_cols.value + Columns.ft_cat_cols.value)
     plog("Created adoptionspeed based new features on train and test using featuretools")
 
     train.drop(["RescuerID"], axis=1, inplace=True)

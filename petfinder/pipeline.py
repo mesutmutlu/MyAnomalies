@@ -23,8 +23,9 @@ if __name__ == "__main__":
     train, test = add_features(train, test)
     if "PetID" in train.columns.values:
         train_pet_id = train["PetID"]
-        train.drop(["PetID"], axis=1, inplace=True)
         train_adoption_speed = train["AdoptionSpeed"]
+        train.drop(["PetID", "AdoptionSpeed"], axis=1, inplace=True)
+
     if "PetID" in test.columns.values:
         test_pet_id = test["PetID"]
         test.drop(["PetID"], axis=1, inplace=True)
