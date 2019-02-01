@@ -174,30 +174,34 @@ def auto_adp_features(train, test, cols, entities):
     return train, test
 
 def tsne(x_train, y_train):
-    perplexities = [5, 30, 50, 100]
+    perplexities = [30]
     # (fig, subplots) = plt.subplots(1, 5, figsize=(15, 8))
     print(len(x_train), len(y_train))
     #    ax = subplots[0][0]
-    print("tsne started")
+    plog("tsne started")
 
     for i, perplexity in enumerate(perplexities):
         # ax = subplots[0][i + 1]
+        plog(str(i) + " for perplexity " + str(perplexity) + " tsne started")
 
         t0 = time()
-        print(datetime.datetime.now())
         tsne = manifold.TSNE(n_components=2, init='random',
                              random_state=0, perplexity=perplexity)
         Y = tsne.fit_transform(x_train)
-        print(datetime.datetime.now())
+        plog(str(i) + " for perplexity " + str(perplexity) + " tsne ended")
         t1 = time()
         print("circles, perplexity=%d in %.2g sec" % (perplexity, t1 - t0))
         print(len(x_train), len(Y))
         print(Y)
-        data = pd.concat([pd.DataFrame(data=Y, columns=["tsne1", "tsne2"]), y_train], axis=1)
+        data = pd.concat([pd.DataFrame(data=Y, columns=["tsne1", "tsne2"]),
+                          pd.DataFrame(data = y_train, columns=["AdoptionSpeed"])],
+                         axis=1)
         print(data)
         # ax.set_title("Perplexity=%d" % perplexity)
         sns.scatterplot(x="tsne1", y="tsne2", hue="AdoptionSpeed", data=data, legend="full")
+
         plt.show()
+
 
         # ax.axis('tight')
 
@@ -208,8 +212,6 @@ if __name__ == "__main__":
     train, test = read_data()
     c = Columns.ind_num_cat_columns.value.copy()
     print(c)
-    c.remove("RescuerType")
-    c.remove("RescuerID")
     c2 = Columns.ind_cont_columns.value.copy()
     c2.remove("NameLength")
     c2.remove("DescLength")

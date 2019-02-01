@@ -6,6 +6,8 @@ import os
 import json
 from enum import Enum
 from sklearn.feature_selection import VarianceThreshold
+import time
+
 
 
 class Paths(Enum):
@@ -79,6 +81,17 @@ def read_data():
 
     train = pd.read_csv(Paths.base.value+"train/train.csv")
     test = pd.read_csv(Paths.base.value+"test/test.csv")
+    breed_labels = pd.read_csv(Paths.base.value + "breed_labels.csv")
+
+    breed_labels["Type_Breed"] = breed_labels.apply( lambda  x: (x["Type"], x["BreedID"]), axis=1)
+    train["Type_Breed1"] = train.apply(lambda  x: (x["Type"], x["Breed1"]), axis=1)
+    train["isin_Type_Breed1"] = train.apply(lambda x: True if x["Breed1"] == 0 else  x["Type_Breed1"] in breed_labels["Type_Breed"].values.tolist(), axis=1)
+    train["Type_Breed2"] = train.apply(lambda  x: (x["Type"], x["Breed2"]), axis=1)
+    train["isin_Type_Breed2"] = train.apply(lambda x: True if x["Breed2"] == 0 else x["Type_Breed2"] in breed_labels["Type_Breed"].values.tolist(), axis=1)
+
+    train = train[train["isin_Type_Breed1"] == True]
+    train = train[train["isin_Type_Breed2"] == True]
+    train.drop(["Type_Breed1", "Type_Breed2", "isin_Type_Breed1", "isin_Type_Breed2"], axis=1, inplace=True)
 
     rc_snt = 0
     train_snt = get_desc_anly("train", rc_snt)
@@ -223,26 +236,9 @@ if __name__ == "__main__":
     #print(sys.platform)
 
     train, test = read_data()
+    print(len(train))
 
-    breed_labels = pd.read_csv("C:/datasets/petfinder.my/breed_labels.csv")
-    breed_labels = breed_labels.astype(str)
-    breed_labels["Type_Breed"] = breed_labels["Type"] + "_"+breed_labels["BreedID"]
-    print(breed_labels)
-    train = train[["Type","Breed1", "Breed2"]]
 
-    train_b1 = train[["Type","Breed1"]].groupby(["Type", "Breed1"]).count().reset_index()
-    train_b1 = train_b1.astype(str)
-    train_b1["Type_Breed1"] =train_b1["Type"] + "_"+train_b1["Breed1"]
-    #print(train_b1)
-    train_b2 = train[["Type", "Breed2"]].groupby(["Type", "Breed2"]).count().reset_index()
-    train_b2 = train_b2.astype(str)
-    train_b2["Type_Breed2"] = train_b2["Type"] + "_" + train_b2["Breed2"]
-    for index, row in train_b1.iterrows():
-        train_b1["isin"] = row["Type_Breed1"] in breed_labels["Type_Breed"].values
-    print(train_b1)
-    for index, row in train_b2.iterrows():
-        train_b2["isin"] = row["Type_Breed2"] in breed_labels["Type_Breed"].values
-    print(train_b2)
 
 
     #print(h.sort_values(by=['count', 'mean'],ascending=False))

@@ -1,6 +1,6 @@
 from petfinder.get_explore import read_data, Columns, Paths
 from petfinder.preprocessing import prepare_data
-from petfinder.tools import tfidf_2, plog, detect_outliers, auto_features, auto_adp_features
+from petfinder.tools import tfidf_2, plog, detect_outliers, auto_features, auto_adp_features, tsne
 from time import time
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -100,10 +100,32 @@ def autoenc(data):
 
     x_scale = preprocessing.MinMaxScaler().fit_transform(x.values)
     x_0, x_1, x_2, x_3, x_4 = x_scale[y == 0], x_scale[y == 1], x_scale[y == 2], x_scale[y == 3], x_scale[y == 4]
+    print(x_0.shape)
+    print(x_1.shape)
+    print(x_2.shape)
+    print(x_3.shape)
+    print(x_4.shape)
     df = pd.DataFrame()
-    for x in [x_0, x_1, x_2, x_3, x_4]:
-        x_norm = [x_0, x_1, x_2, x_3, x_4].remove(x)
-        x_fraud = x
+    rep_x = ""
+    rep_y = ""
+    for i in range(0,5):
+        plog("autoenc for " + str(i))
+        if i == 0:
+            x_norm = np.concatenate((x_1, x_2, x_3, x_4), axis=0)
+            x_class = x_0
+        elif i == 1:
+            x_norm = np.concatenate((x_0, x_2, x_3, x_4), axis=0)
+            x_class = x_1
+        elif i == 2:
+            x_norm = np.concatenate((x_0, x_1, x_3, x_4), axis=0)
+            x_class = x_2
+        elif i == 3:
+            x_norm = np.concatenate((x_0, x_1, x_2, x_4), axis=0)
+            x_class = x_3
+        elif i == 4:
+            x_norm = np.concatenate((x_0, x_1, x_2, x_3), axis=0)
+            x_class = x_4
+
         autoencoder.fit(x_norm, x_norm,
                         batch_size=256, epochs=10,
                         shuffle=True, validation_split=0.20);
@@ -113,17 +135,21 @@ def autoenc(data):
         hidden_representation.add(autoencoder.layers[1])
         hidden_representation.add(autoencoder.layers[2])
 
-        norm_hid_rep = hidden_representation.predict(x_norm[:3000])
-        fraud_hid_rep = hidden_representation.predict(x_fraud)
+        norm_hid_rep = hidden_representation.predict(x_norm)
+        class_hid_rep = hidden_representation.predict(x_class)
 
-        y_n = np.zeros(norm_hid_rep.shape[0])
-        y_f = np.ones(fraud_hid_rep.shape[0])
-        rep_y = np.append(y_n, y_f)
-        if len(df) == 0:
-            df = rep_y
+        if rep_x == "":
+            rep_x = class_hid_rep
+        else :
+            rep_x = np.append(rep_x, class_hid_rep, axis=0)
+
+        y_c = np.full(class_hid_rep.shape[0], i)
+        if rep_y == "":
+            rep_y = y_c
         else:
-            df = pd.concat([df, rep_y])
-    print(df)
+            rep_y = np.append(rep_y, y_c)
+
+    tsne(rep_x, rep_y)
     #sns.scatterplot(x="tsne1", y="tsne2", hue="AdoptionSpeed", data=data, legend="full")
 
 def add_features(train, test):
@@ -229,10 +255,19 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
 
     train, test = read_data()
+    c = Columns.ind_num_cat_columns.value.copy()
+    print(c)
+    c2 = Columns.ind_cont_columns.value.copy()
+    c2.remove("NameLength")
+    c2.remove("DescLength")
+    train_x = train[c2 + c]
+    train_x.fillna(0, inplace=True)
+    train_y = train[["AdoptionSpeed"]]
+    #tsne(train_x, train_y)
+    autoenc(pd.concat([train_x, train_y], axis=1))
+
+
     train, test = prepare_data(train, test)
-
-
-
     train, test = add_features(train, test)
     x_train, y_train, x_test, id_test = finalize_data(train, test)
 
