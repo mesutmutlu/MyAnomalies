@@ -12,7 +12,7 @@ import math
 from petfinder.get_explore import read_data, Columns
 from petfinder.preprocessing import prepare_data
 from petfinder.feature_engineering import finalize_data, add_features, filter_by_varth
-from petfinder.tools import detect_outliers
+from petfinder.tools import detect_outliers, plog
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
@@ -21,6 +21,27 @@ if __name__ == "__main__":
     train, test = read_data()
     train, test = prepare_data(train, test)
     train, test = add_features(train, test)
+
+    ccols = train.columns.values.tolist()
+    for c in ccols:
+        if train[c].isna().any():
+            print("null", c)
+
+    o_cols = train.columns.values.tolist()
+    for c in ["PetID", "Breed1", "Breed2", "RescuerID", "AdoptionSpeed","Color1", "Color2", "Color3", "State"]:
+        if c in o_cols:
+            o_cols.remove(c)
+    #train[o_cols] = train[o_cols].apply(lambda x: x.fillna(x.mean()), axis=0)
+    #train[o_cols] = train[o_cols].apply(lambda x: x.fillna(x.mean()), axis=0)
+
+    plog("Outlier detection started")
+
+    df_o = detect_outliers(train[o_cols + ["AdoptionSpeed"]],1)
+    print("df_o", df_o.shape, "train_df", train.shape)
+    train = pd.concat([train, df_o], axis=1)
+    train.to_csv("train_f.csv")
+    test.to_csv("test_f.csv")
+    plog("Outlier detection ended")
     if "PetID" in train.columns.values:
         train_pet_id = train["PetID"]
         train_adoption_speed = train["AdoptionSpeed"]
@@ -30,13 +51,12 @@ if __name__ == "__main__":
         test_pet_id = test["PetID"]
         test.drop(["PetID"], axis=1, inplace=True)
 
-    train_t, test_t = filter_by_varth(train, test, (.8 * (1 - .8)))
+    #train_t, test_t = filter_by_varth(train, test, (.8 * (1 - .8)))
 
-    print(train_t.columns.values)
-    print(test_t.columns.values)
+    #print(train_t.columns.values)
+    #print(test_t.columns.values)
     # train_df = pd.concat([train_t, train_pet_id, train_adoption_speed], axis=1)
     # test_df = pd.concat([test_t, test_pet_id], axis=1)
-    sys.exit()
 
     # print(train_df.head())
     o_numccatols = Columns.ind_num_cat_columns.value.copy()
@@ -49,14 +69,13 @@ if __name__ == "__main__":
              Columns.iann_cols.value + Columns.ft_cols.value + Columns.item_type_cols.value
 
     for c in v_cols:
-        if c not in train.columns.values:
-            print("na", c)
-        if train[c].isna().any():
-            print("null", c)
-            train[c].fillna(0, inplace=True)
-    train_x, test_x = filter_by_varth(train, test, (.8 * (1 - .8)))
-    train["outlier"].fillna(0, inplace=True)
-    outlier = 0
+        if c in train.columns.values:
+            if train[c].isna().any():
+                print("null", c)
+                train[c].fillna(0, inplace=True)
+    #train_x, test_x = filter_by_varth(train, test, (.8 * (1 - .8)))
+    train["outlier"].fillna(1, inplace=True)
+    outlier = 1
     print("uniques")
     print(train["outlier"].unique())
     print(train[train["outlier"]<=outlier].shape)

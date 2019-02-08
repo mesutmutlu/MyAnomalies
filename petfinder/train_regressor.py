@@ -29,7 +29,12 @@ def confusion_matrix(rater_a, rater_b, min_rating=None, max_rating=None):
     for a, b in zip(rater_a, rater_b):
         x = a - min_rating
         y = b - min_rating
-        conf_mat[x[0]][y[0]] += 1
+        if not np.isscalar(x):
+            x=x[0]
+        if not np.isscalar(y):
+            y=y[0]
+        #print(x,y)
+        conf_mat[x][y] += 1
     return conf_mat
 
 
@@ -45,7 +50,9 @@ def histogram(ratings, min_rating=None, max_rating=None):
     hist_ratings = [0 for x in range(num_ratings)]
     for r in ratings:
         x = r - min_rating
-        hist_ratings[x[0]] += 1
+        if not np.isscalar(x):
+            x = x[0]
+        hist_ratings[x] += 1
     return hist_ratings
 
 
@@ -143,30 +150,6 @@ class OptimizedRounder(object):
 
     def coefficients(self):
         return self.coef_['x']
-
-    def fit(self, X, y):
-        loss_partial = partial(self._kappa_loss, X=X, y=y)
-        initial_coef = [0.5, 1.5, 2.5, 3.5]
-        self.coef_ = sp.optimize.minimize(loss_partial, initial_coef, method='nelder-mead')
-
-    def predict(self, X, coef):
-        X_p = np.copy(X)
-        for i, pred in enumerate(X_p):
-            if pred < coef[0]:
-                X_p[i] = 0
-            elif pred >= coef[0] and pred < coef[1]:
-                X_p[i] = 1
-            elif pred >= coef[1] and pred < coef[2]:
-                X_p[i] = 2
-            elif pred >= coef[2] and pred < coef[3]:
-                X_p[i] = 3
-            else:
-                X_p[i] = 4
-        return X_p
-
-
-def coefficients(self):
-    return self.coef_['x']
 
 
 def rmse(actual, predicted):

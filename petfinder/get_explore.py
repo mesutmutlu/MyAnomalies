@@ -66,10 +66,11 @@ class Columns(Enum):
         return tmp_ft_cols
 
     ft_cols = feature_cols()
-    item_type_incols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State", "RescuerID",
-                           "FurLength", "MaturitySize"]
-    item_type_cols =  [c + "_Type" for c in item_type_incols]
+    item_type_incols = ["RescuerID", "Breed1", "Breed2", "Color1", "Color2", "Color3"]
+    item_type_cols = [c + "_Type" for c in item_type_incols]
+    item_adp_cols = [c + "_Adp" for c in
+                     ["RescuerID_Type", "Breed1_Type", "Breed2_Type", "Color1_Type", "Color2_Type", "Color3_Type"]]
+
 
     @staticmethod
     def list(t):
@@ -225,6 +226,23 @@ def get_img_meta(type, img_num, recalc):
     return df_imgs
 
 
+def set_pet_breed(b1, b2):
+    if (b1 in (0, 307)) & (b2 in (0, 307)):
+        return 4
+    elif (b1 in (307)) & (b2 not in (0, 307)):
+        return 3
+    elif (b2 in (307)) & (b1 not in (0, 307)):
+        return 3
+    elif (b1 not in (0, 307)) & (b2 not in (0, 307)):
+        return 2
+    elif (b1 in (0)) & (b2 not in (0, 307)):
+        return 1
+    elif (b2 in (0)) & (b1 not in (0, 307)):
+        return 1
+    else:
+        return 4
+
+
 
 if __name__ == "__main__":
 
@@ -236,6 +254,7 @@ if __name__ == "__main__":
     #print(sys.platform)
 
     train, test = read_data()
+    train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
     print(len(train))
 
     df = train.groupby("Color1").agg({'PetID': 'count', 'AdoptionSpeed': 'mean'})

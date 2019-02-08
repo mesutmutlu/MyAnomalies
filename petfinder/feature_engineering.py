@@ -20,40 +20,38 @@ import pandas as pd
 from keras import regularizers
 from sklearn import preprocessing
 from sklearn.feature_selection import VarianceThreshold
+from petfinder.train_regressor import OptimizedRounder
 
-def setRescuerType(val):
-    if val >= 10:
-        return 3
-    elif val > 5:
-        return 2
-    elif val > 1:
-        return 1
+def setItemType(val, c):
+    if c in ["Color1", "Color2", "Color3"]:
+        v1, v2, v3, v4, v5 = 10, 100, 250, 500, 1000
+    elif c in ["RescuerID"]:
+        v1, v2, v3, v4, v5 = 1, 5, 10, 20, 50
+    elif c in ["Breed1", "Breed2"]:
+        v1, v2, v3, v4, v5 = 1, 10, 50, 250, 1000
     else:
-        return 0
-
-def rescuerType(df):
-    train_r = df.groupby(['RescuerID'])["PetID"].count().reset_index()
-    train_r["RescuerType"] = train_r.apply(lambda x: setRescuerType(x['PetID']), axis=1)
-    return train_r[["RescuerID", "RescuerType"]]
-
-def setItemType(val):
-    if val >= 10:
+        v1, v2, v3, v4, v5 = 1, 5, 10, 20, 50
+    if val > v5:
+        return 5
+    elif val > v4:
+        return 4
+    elif val > v3:
         return 3
-    elif val > 5:
+    elif val > v2:
         return 2
-    elif val > 1:
+    elif val > v1:
         return 1
     else:
         return 0
 
 def itemType(df, col):
     train_r = df.groupby(col)["PetID"].count().reset_index()
-    train_r[col+"_Type"] = train_r.apply(lambda x: setRescuerType(x['PetID']), axis=1)
+    train_r[col+"_Type"] = train_r.apply(lambda x: setItemType(x['PetID'], col), axis=1)
+    #train_r[col+"_Type"] = train_r['PetID']
     return train_r[[col, col+"_Type"]]
 
-
-def setMeanAdoptionSpeed(val):
-    if val >= 3.2:
+def setItemAdp(val):
+    if val > 3.5:
         return 4
     elif val > 2.5:
         return 3
@@ -64,10 +62,11 @@ def setMeanAdoptionSpeed(val):
     else:
         return 0
 
-def meanAdoptionSpeed(df, col):
-    train_r = df.groupby([col])["AdoptionSpeed"].mean().reset_index()
-    train_r[col+"_mADP"] = train_r.apply(lambda x: setMeanAdoptionSpeed(x['AdoptionSpeed']), axis=1)
-    return train_r[[col, col+"_mADP"]]
+def itemAdp(df, col):
+    train_r = df.groupby(col)["AdoptionSpeed"].mean().reset_index()
+    train_r[col+"_Adp"] = train_r.apply(lambda x: setItemAdp(x['AdoptionSpeed']), axis=1)
+    #train_r[col+"_Adp"] = train_r['AdoptionSpeed']
+    return train_r[[col, col+"_Adp"]]
 
 def quantile_bin(df, col):
     quantile_list = [0, .25, .5, .75, 1.]
@@ -170,6 +169,9 @@ def add_features(train, test):
     plog("tfidf for test image label ended")
     test = pd.concat([test, svd_test_desc, svd_test_lbldsc], axis=1)
     plog("test tfidf concatenation ended")
+    train.drop(['Lbl_Scr_3','Lbl_Img','Lbl_Scr_2','Lbl_Scr_1'], axis=1, inplace=True)
+    test.drop(['Lbl_Scr_3','Lbl_Img','Lbl_Scr_2','Lbl_Scr_1'], axis=1, inplace=True)
+
 
     plog("setting length of description and name on train and test")
     train["DescLength"] = train["Description"].str.len()
@@ -182,46 +184,71 @@ def add_features(train, test):
     test.drop(["Description", "Name"], axis=1, inplace=True)
 
     for c in Columns.item_type_incols.value:
-        plog("Creating "+c+"_Type for train on "+ c)
+        # if c in train_df.columns.values:
+        #    plog("Deleting "+c)
+        #    train_df.drop(c, axis=1, inplace=True)
+        plog("Creating " + c + "_Type for train on " + c)
         df_itr = itemType(train, c)
-        train = train.set_index(c).join(df_itr.set_index(c)).reset_index()
-        plog("Created "+c+"_Type for train on " + c)
-        plog("Creating "+c+"_Type for test on "+ c)
+        train= train.set_index(c).join(df_itr.set_index(c)).reset_index()
+        plog("Created " + c + "_Type for train on " + c)
+        plog("Creating " + c + "_Type for test on " + c)
         df_its = itemType(test, c)
         test = test.set_index(c).join(df_its.set_index(c)).reset_index()
-        plog("Created "+c+"_Type for test on " + c)
+        plog("Created " + c + "_Type for test on " + c)
 
+    for c in Columns.item_type_cols.value:
+        if c + "_Adp" in train.columns.values:
+            plog("Deleting train " + c + "_Adp")
+            train.drop([c + "_Adp"], axis=1, inplace=True)
+        plog("Creating " + c + "_Adp for train on " + c)
+        df_itr = itemAdp(train, c)
+        train = train.set_index(c).join(df_itr.set_index(c)).reset_index()
+        optR = OptimizedRounder()
+        optR.fit(train[c + "_Adp"], train["AdoptionSpeed"])
+        coefficients = optR.coefficients()
+        pred_test_y_k = optR.predict(train[c + "_Adp"], coefficients)
+        train[c+"_Adp"]= pred_test_y_k
+        plog("Created " + c + "_Adp for train on " + c)
+        if c + "_Adp" in test.columns.values:
+            plog("Deleting test " + c + "_Adp")
+            test.drop([c + "_Adp"], axis=1, inplace=True)
+        plog("Creating " + c + "_Adp for test on " + c)
+        # df_its = itemAdp(test_df, c)
+        #print(df_itr)
+        test = test.set_index(c).join(df_itr.set_index(c)).reset_index()
+        test[c + "_Adp"].fillna(3, inplace=True)
+        plog("Created " + c + "_Adp for test on " + c)
 
-    plog("creating new features on train using featuretools")
-    train = auto_features(train,
-                          Columns.iden_columns.value + Columns.ft_cat_cols.value +
-                          Columns.item_type_cols.value + Columns.ft_new_cols.value,
-                          Columns.item_type_cols.value + Columns.ft_cat_cols.value)
-    plog("created new features on train using featuretools")
+    autof = 0
+    if autof == 1:
+        plog("creating new features on train using featuretools")
+        train = auto_features(train,
+                              Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                              Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                              Columns.item_type_cols.value + Columns.ft_cat_cols.value)
+        plog("created new features on train using featuretools")
 
-    plog("creating new features on test using featuretools")
-    test = auto_features(test,
-                         Columns.iden_columns.value + Columns.ft_cat_cols.value +
-                         Columns.item_type_cols.value + Columns.ft_new_cols.value,
-                         Columns.item_type_cols.value + Columns.ft_cat_cols.value)
-    plog("created new features on test using featuretools")
+        plog("creating new features on test using featuretools")
+        test = auto_features(test,
+                             Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                             Columns.item_type_cols.value + Columns.ft_new_cols.value,
+                             Columns.item_type_cols.value + Columns.ft_cat_cols.value)
+        plog("created new features on test using featuretools")
 
-    plog("creating adoptionspeed based new features on train and test using featuretools")
-    train, test = auto_adp_features(train, test,
-                                    Columns.iden_columns.value + Columns.ft_cat_cols.value +
-                                    Columns.item_type_cols.value + ["AdoptionSpeed"],
-                                    Columns.item_type_cols.value + Columns.ft_cat_cols.value)
-    plog("Created adoptionspeed based new features on train and test using featuretools")
+        plog("creating adoptionspeed based new features on train and test using featuretools")
+        train, test = auto_adp_features(train, test,
+                                        Columns.iden_columns.value + Columns.ft_cat_cols.value +
+                                        Columns.item_type_cols.value + ["AdoptionSpeed"],
+                                        Columns.item_type_cols.value + Columns.ft_cat_cols.value)
+        plog("Created adoptionspeed based new features on train and test using featuretools")
 
     train.drop(["RescuerID"], axis=1, inplace=True)
     test.drop(["RescuerID"], axis=1, inplace=True)
 
-    train.fillna(-1, inplace=True)
-    test.fillna(-1, inplace=True)
-    print(train.shape)
-    print(train.columns.values)
-    print(test.shape)
-    print(test.columns.values)
+    print("-------train dataset", train.shape, "columns-------")
+    #print(train.columns.values)
+    print("-------test dataset", test.shape, "columns-------")
+    #print(test.columns.values)
     return train, test
 
 def filter_by_varth(train, test, threshold):
