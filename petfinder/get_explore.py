@@ -238,6 +238,14 @@ if __name__ == "__main__":
     train, test = read_data()
     print(len(train))
 
+    df = train.groupby("Color1").agg({'PetID': 'count', 'AdoptionSpeed': 'mean'})
+    print(df)
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler()
+    scaler.fit(df)
+    print(scaler.transform(df))
+
 
 
 
