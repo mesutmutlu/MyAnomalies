@@ -7,6 +7,7 @@ import json
 from enum import Enum
 from sklearn.feature_selection import VarianceThreshold
 import time
+import numpy as np
 
 
 
@@ -21,7 +22,7 @@ class Columns(Enum):
                         "FurLength", "MaturitySize", "DescScore", "DescMagnitude",
                         "DescLength", "NameLength"]
     ind_num_cat_columns = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
-                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State"]
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State",  "Pet_Breed"]
     ind_text_columns = ["Name", "Description"]
     iden_columns = ["PetID"]
     dep_columns = ["AdoptionSpeed"]
@@ -47,8 +48,6 @@ class Columns(Enum):
                    "Vaccinated", "Dewormed", "Sterilized", "Health", "State",
                    "FurLength", "MaturitySize"]
     ft_new_cols = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity"]
-
-
     def feature_cols():
         tmp_ft_cols = []
         for cc in ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
@@ -66,10 +65,13 @@ class Columns(Enum):
         return tmp_ft_cols
 
     ft_cols = feature_cols()
-    item_type_incols = ["RescuerID", "Breed1", "Breed2", "Color1", "Color2", "Color3"]
+    item_type_incols = ["RescuerID", "Breed1", "Breed2", "Color1", "Color2", "Color3", "Pet_Breed"]
     item_type_cols = [c + "_Type" for c in item_type_incols]
     item_adp_cols = [c + "_Adp" for c in
                      ["RescuerID_Type", "Breed1_Type", "Breed2_Type", "Color1_Type", "Color2_Type", "Color3_Type"]]
+
+    fee_mean_incols = ["Breed1", "Breed2", "Age", "Quantity"]
+    fee_mean_cols = ["Fee_" + c for c in fee_mean_incols]
 
 
     @staticmethod
@@ -229,16 +231,18 @@ def get_img_meta(type, img_num, recalc):
 def set_pet_breed(b1, b2):
     if (b1 in (0, 307)) & (b2 in (0, 307)):
         return 4
-    elif (b1 in (307)) & (b2 not in (0, 307)):
+    elif (b1 == 307) & (b2 not in (0, 307)):
         return 3
-    elif (b2 in (307)) & (b1 not in (0, 307)):
+    elif (b2 == 307) & (b1 not in (0, 307)):
         return 3
-    elif (b1 not in (0, 307)) & (b2 not in (0, 307)):
+    elif (b1 not in (0, 307)) & (b2 not in (0, 307)) & (b1 != b2):
         return 2
-    elif (b1 in (0)) & (b2 not in (0, 307)):
+    elif (b1 == 0) & (b2 not in (0, 307)):
         return 1
-    elif (b2 in (0)) & (b1 not in (0, 307)):
+    elif (b2 == 0) & (b1 not in (0, 307)):
         return 1
+    elif (b1 not in (0, 307)) & (b2 not in (0, 307)) & (b1 == b2):
+        return 0
     else:
         return 4
 
@@ -254,10 +258,42 @@ if __name__ == "__main__":
     #print(sys.platform)
 
     train, test = read_data()
+
+    X=train[["MaturitySize"]]
+    y=train[["AdoptionSpeed"]]
+    R = 10
+    sums = np.zeros([len(X), 1])
+    lens = np.zeros([len(X), 1])
+    randomness =1+np.random.normal(scale = 0.03, size=len(sums)).reshape(len(sums), 1)
+    for c in X.columns.values:
+        for uval in X[c].unique():
+            indexes = X[X[c] == uval].index
+            s_tot = y.loc[indexes].sum()
+            l = len(indexes)-1+R
+            lens[indexes, 0] = 1/l
+            #print(uval, indexes, s_tot)
+            for i in indexes:
+                s_ind = s_tot - int(y.loc[i])
+                sums[i,0] = s_ind
+        print(lens.shape)
+        #print(lens)
+        print(sums.shape)
+        #print(sums)
+        print(randomness.shape)
+        print(randomness)
+        print(sums*lens*randomness)
+
+
+
+
+
+    sys.exit()
+
     train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
+
     print(len(train))
 
-    df = train.groupby("Color1").agg({'PetID': 'count', 'AdoptionSpeed': 'mean'})
+    df = train.groupby("Pet_Breed").agg({'PetID': 'count', 'AdoptionSpeed': 'mean'})
     print(df)
     from sklearn.preprocessing import MinMaxScaler
 
