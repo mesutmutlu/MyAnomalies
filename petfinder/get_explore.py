@@ -8,7 +8,7 @@ from enum import Enum
 from sklearn.feature_selection import VarianceThreshold
 import time
 import numpy as np
-
+import glob
 
 
 class Paths(Enum):
@@ -16,6 +16,15 @@ class Paths(Enum):
         base = "/home/mesut/kaggle/petfinder.my/"
     else:
         base = "C:/datasets/petfinder.my/"
+
+class FileNum(Enum):
+    train_image_files = sorted(glob.glob(Paths.base.value+"train_images/*.jpg"))
+    train_metadata_files = sorted(glob.glob(Paths.base.value+"train_metadata/*.json"))
+    train_sentiment_files = sorted(glob.glob(Paths.base.value+"train_sentiment/*.json"))
+
+    test_image_files = sorted(glob.glob(Paths.base.value + "test_images/*.jpg"))
+    test_metadata_files = sorted(glob.glob(Paths.base.value + "test_metadata/*.json"))
+    test_sentiment_files = sorted(glob.glob(Paths.base.value + "test_sentiment/*.json"))
 
 class Columns(Enum):
     ind_cont_columns = ["Age", "Fee", "VideoAmt", "PhotoAmt", "Quantity",
@@ -228,6 +237,67 @@ def get_img_meta(type, img_num, recalc):
     return df_imgs
 
 
+def get_all_img_meta(type, recalc):
+    # getting image analyse metadata
+    if recalc == 1:
+        if type == "train":
+            path = Paths.base.value+"train_metadata/"
+        else:
+            path = Paths.base.value+"test_metadata/"
+
+        cols = ["PetID"]
+        df_imgs = pd.DataFrame(columns=cols)
+
+        images = [f for f in sorted(os.listdir(path)) if
+                  (f.endswith(".json") & os.path.isfile(path + f))]
+        i = 0
+        for img in images:
+            PetID, imgnum = img.split("-", 1)
+            imgnum = imgnum.strip(".json")
+            #PetID = img[:-7]
+            # print(i, PetID,k, img, (img[-6:-5]), l_petid)
+
+            with open(path + img, encoding="utf8") as json_data:
+                data = json.load(json_data)
+            vertex_x = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x', -1)
+            vertex_y = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y', -1)
+            bounding_confidence = data['cropHintsAnnotation']['cropHints'][0].get('confidence', -1)
+            bounding_importance_frac = data['cropHintsAnnotation']['cropHints'][0].get('importanceFraction', -1)
+            dominant_blue = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('blue', 255)
+            dominant_green = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('green', 255)
+            dominant_red = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('red', 255)
+            RGBint = (dominant_red << 16) + (dominant_green << 8) + dominant_blue
+            dominant_pixel_frac = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('pixelFraction',
+                                                                                                       -1)
+            dominant_score = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('score', -1)
+
+            if data.get('labelAnnotations'):
+                label_description = ""
+                label_score = 0
+                j = 1
+                for ann in data.get('labelAnnotations'):
+                    label_score = (ann.get('score', 0) + label_score) / j
+                    if ann.get("description"):
+                        label_description = label_description + " " + ann.get("description", "")
+                    j += 1
+            else:
+                label_description = ""
+                label_score = 0
+            si = imgnum
+            cols2 = ["Vertex_X_"+si, "Vertex_Y_"+si, "Bound_Conf_"+si, "Bound_Imp_Frac_"+si,
+                      "Dom_Blue_"+si, "Dom_Green_"+si, "Dom_Red_"+si,
+                "RGBint_"+si, "Dom_Px_Fr_"+si, "Dom_Scr_"+si, "Lbl_Scr_"+si]
+            df_imgs.loc[i, cols + cols] = [PetID, vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
+                                    dominant_blue, dominant_green, dominant_red,
+                                    dominant_pixel_frac, dominant_score, label_score, label_description]
+            i = i+1
+        #print(df_imgs.head())
+        #df_imgs.to_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv", index=False)
+    elif recalc == 0:
+        pass#df_imgs = pd.read_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv")
+
+    return df_imgs
+
 def set_pet_breed(b1, b2):
     if (b1 in (0, 307)) & (b2 in (0, 307)):
         return 4
@@ -256,38 +326,10 @@ if __name__ == "__main__":
     #train, test = read_data()
     #print(train.corr())
     #print(sys.platform)
-
-    train, test = read_data()
-
-    X=train[["MaturitySize"]]
-    y=train[["AdoptionSpeed"]]
-    R = 10
-    sums = np.zeros([len(X), 1])
-    lens = np.zeros([len(X), 1])
-    randomness =1+np.random.normal(scale = 0.03, size=len(sums)).reshape(len(sums), 1)
-    for c in X.columns.values:
-        for uval in X[c].unique():
-            indexes = X[X[c] == uval].index
-            s_tot = y.loc[indexes].sum()
-            l = len(indexes)-1+R
-            lens[indexes, 0] = 1/l
-            #print(uval, indexes, s_tot)
-            for i in indexes:
-                s_ind = s_tot - int(y.loc[i])
-                sums[i,0] = s_ind
-        print(lens.shape)
-        #print(lens)
-        print(sums.shape)
-        #print(sums)
-        print(randomness.shape)
-        print(randomness)
-        print(sums*lens*randomness)
-
-
-
-
-
+    print(FileNum.train_metadata_files.value)
+    print(get_all_img_meta("train", 1))
     sys.exit()
+    train, test = read_data()
 
     train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
 
