@@ -24,8 +24,17 @@ if __name__ == "__main__":
 
     ccols = train.columns.values.tolist()
     for c in ccols:
-        if train[c].isna().any():
-            print("null", c)
+        if (train[c].isna().any()) & \
+                (c in Columns.img_num_cols_1.value + Columns.img_num_cols_2.value  + Columns.img_num_cols_3.value ):
+            plog("filling "+c+" with 0 on train dataset")
+            train[c].fillna(0, inplace=True)
+
+    ccols = test.columns.values.tolist()
+    for c in ccols:
+        if (test[c].isna().any()) & \
+                (c in Columns.img_num_cols_1.value + Columns.img_num_cols_2.value  + Columns.img_num_cols_3.value ):
+            plog("filling " + c + " with 0 on test dataset")
+            test[c].fillna(0, inplace=True)
 
     o_cols = train.columns.values.tolist()
     for c in ["PetID", "Breed1", "Breed2", "RescuerID", "AdoptionSpeed","Color1", "Color2", "Color3", "State"]:
@@ -33,6 +42,8 @@ if __name__ == "__main__":
             o_cols.remove(c)
     #train[o_cols] = train[o_cols].apply(lambda x: x.fillna(x.mean()), axis=0)
     #train[o_cols] = train[o_cols].apply(lambda x: x.fillna(x.mean()), axis=0)
+
+
 
     plog("Outlier detection started")
 
@@ -58,21 +69,7 @@ if __name__ == "__main__":
     # train_df = pd.concat([train_t, train_pet_id, train_adoption_speed], axis=1)
     # test_df = pd.concat([test_t, test_pet_id], axis=1)
 
-    # print(train_df.head())
-    o_numccatols = Columns.ind_num_cat_columns.value.copy()
-    o_numccatols.remove("State")
-    o_numccatols.remove("Breed1")
-    o_numccatols.remove("Breed2")
 
-    v_cols = Columns.ind_cont_columns.value + o_numccatols + Columns.desc_cols.value + \
-             Columns.img_num_cols_1.value + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + \
-             Columns.iann_cols.value + Columns.ft_cols.value + Columns.item_type_cols.value
-
-    for c in v_cols:
-        if c in train.columns.values:
-            if train[c].isna().any():
-                print("null", c)
-                train[c].fillna(0, inplace=True)
     #train_x, test_x = filter_by_varth(train, test, (.8 * (1 - .8)))
     train["outlier"].fillna(1, inplace=True)
     outlier = 1
@@ -81,6 +78,10 @@ if __name__ == "__main__":
     print(train[train["outlier"]<=outlier].shape)
     x_train, y_train, x_test, id_test = finalize_data(train[train["outlier"]<=outlier], test)
 
+    x_train.to_csv("x_train.csv", index=False)
+    y_train.to_csv("y_train.csv", index=False)
+    x_test.to_csv("x_test.csv", index=False)
+    id_test.to_csv("id_test.csv", index=False)
 
     print(x_train.shape)
     print(x_train.columns.values)

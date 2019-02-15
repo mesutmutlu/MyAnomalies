@@ -24,11 +24,13 @@ from petfinder.train_regressor import OptimizedRounder
 
 def setItemType(val, c):
     if c in ["Color1", "Color2", "Color3"]:
-        v1, v2, v3, v4, v5 = 10, 100, 250, 500, 1000
+        v1, v2, v3, v4, v5 = 100, 200, 350, 500, 1000
     elif c in ["RescuerID"]:
         v1, v2, v3, v4, v5 = 1, 5, 10, 20, 50
     elif c in ["Breed1", "Breed2"]:
         v1, v2, v3, v4, v5 = 1, 10, 50, 250, 1000
+    elif c in ["Pet_Breed"]:
+        v1, v2, v3, v4, v5 = 100, 300, 500, 1500, 3500
     else:
         v1, v2, v3, v4, v5 = 1, 5, 10, 20, 50
     if val > v5:
@@ -67,6 +69,30 @@ def itemAdp(df, col):
     train_r[col+"_Adp"] = train_r.apply(lambda x: setItemAdp(x['AdoptionSpeed']), axis=1)
     #train_r[col+"_Adp"] = train_r['AdoptionSpeed']
     return train_r[[col, col+"_Adp"]]
+
+def set_pet_breed(b1, b2):
+    #print(b1, b2)
+    if (b1 in  (0, 307)) & (b2 in  (0, 307)):
+        return 4
+    elif (b1 ==  307) & (b2 not in  (0, 307)):
+        return 3
+    elif (b2 ==  307) & (b1 not in  (0, 307)):
+        return 3
+    elif (b1 not in  (0, 307)) & (b2 not in  (0, 307)) & (b1 != b2):
+        return 2
+    elif (b1 == 0) & (b2 not in  (0, 307)):
+        return 1
+    elif (b2 == 0) & (b1 not in  (0, 307)):
+        return 1
+    elif (b1 not in  (0, 307)) & (b2 not in  (0, 307)) & (b1 == b2):
+        return 0
+    else:
+        return 3
+
+def set_mean_fee(df, col):
+    dfm = df[[col, "Fee"]].groupby(col).mean().reset_index()
+    train = df.set_index(col).join(dfm.set_index(col), rsuffix="_"+col).reset_index()
+    return train
 
 def quantile_bin(df, col):
     quantile_list = [0, .25, .5, .75, 1.]
@@ -183,6 +209,25 @@ def add_features(train, test):
     train.drop(["Description", "Name"], axis=1, inplace=True)
     test.drop(["Description", "Name"], axis=1, inplace=True)
 
+    plog("Creating pet_breed feature on train dataset")
+    train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
+    plog("Pet_breed feature on train dataset created")
+    plog("Creating pet_breed feature on test dataset")
+    test["Pet_Breed"] = test.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
+    plog("Pet_breed feature on test dataset created")
+
+    for c in Columns.fee_mean_incols.value:
+        if "Fee_" + c in train.columns.values.tolist():
+            train.drop("Fee_" + c, axis=1, inplace=0)
+        plog("Creating Fee_" + c + " on train dataset")
+        train = set_mean_fee(train, c)
+        plog("Created_" + c + " on train dataset")
+        if "Fee_" + c in test.columns.values.tolist():
+            test.drop("Fee_" + c, axis=1, inplace=0)
+        plog("Creating Fee_" + c + " on test dataset")
+        test = set_mean_fee(test, c)
+        plog("Created_" + c + " on test dataset")
+
     for c in Columns.item_type_incols.value:
         # if c in train_df.columns.values:
         #    plog("Deleting "+c)
@@ -196,28 +241,30 @@ def add_features(train, test):
         test = test.set_index(c).join(df_its.set_index(c)).reset_index()
         plog("Created " + c + "_Type for test on " + c)
 
-    for c in Columns.item_type_cols.value:
-        if c + "_Adp" in train.columns.values:
-            plog("Deleting train " + c + "_Adp")
-            train.drop([c + "_Adp"], axis=1, inplace=True)
-        plog("Creating " + c + "_Adp for train on " + c)
-        df_itr = itemAdp(train, c)
-        train = train.set_index(c).join(df_itr.set_index(c)).reset_index()
-        optR = OptimizedRounder()
-        optR.fit(train[c + "_Adp"], train["AdoptionSpeed"])
-        coefficients = optR.coefficients()
-        pred_test_y_k = optR.predict(train[c + "_Adp"], coefficients)
-        train[c+"_Adp"]= pred_test_y_k
-        plog("Created " + c + "_Adp for train on " + c)
-        if c + "_Adp" in test.columns.values:
-            plog("Deleting test " + c + "_Adp")
-            test.drop([c + "_Adp"], axis=1, inplace=True)
-        plog("Creating " + c + "_Adp for test on " + c)
-        # df_its = itemAdp(test_df, c)
-        #print(df_itr)
-        test = test.set_index(c).join(df_itr.set_index(c)).reset_index()
-        test[c + "_Adp"].fillna(3, inplace=True)
-        plog("Created " + c + "_Adp for test on " + c)
+    adpf = 0
+    if adpf == 1:
+        for c in Columns.item_type_cols.value:
+            if c + "_Adp" in train.columns.values:
+                plog("Deleting train " + c + "_Adp")
+                train.drop([c + "_Adp"], axis=1, inplace=True)
+            plog("Creating " + c + "_Adp for train on " + c)
+            df_itr = itemAdp(train, c)
+            train = train.set_index(c).join(df_itr.set_index(c)).reset_index()
+            optR = OptimizedRounder()
+            optR.fit(train[c + "_Adp"], train["AdoptionSpeed"])
+            coefficients = optR.coefficients()
+            pred_test_y_k = optR.predict(train[c + "_Adp"], coefficients)
+            train[c+"_Adp"]= pred_test_y_k
+            plog("Created " + c + "_Adp for train on " + c)
+            if c + "_Adp" in test.columns.values:
+                plog("Deleting test " + c + "_Adp")
+                test.drop([c + "_Adp"], axis=1, inplace=True)
+            plog("Creating " + c + "_Adp for test on " + c)
+            # df_its = itemAdp(test_df, c)
+            #print(df_itr)
+            test = test.set_index(c).join(df_itr.set_index(c)).reset_index()
+            test[c + "_Adp"].fillna(3, inplace=True)
+            plog("Created " + c + "_Adp for test on " + c)
 
     autof = 0
     if autof == 1:
@@ -262,12 +309,12 @@ def finalize_data(train, test):
     train_x = train[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
                     + Columns.desc_cols.value + Columns.img_num_cols_1.value
                     + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value
-                    + Columns.ft_cols.value]
+                    + Columns.ft_cols.value + Columns.item_type_cols.value + Columns.fee_mean_cols.value]
     train_y = train[Columns.dep_columns.value]
     test_x = test[Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
                   + Columns.desc_cols.value + Columns.img_num_cols_1.value
                   + Columns.img_num_cols_2.value + Columns.img_num_cols_3.value + Columns.iann_cols.value
-                  + Columns.ft_cols.value]
+                  + Columns.ft_cols.value + Columns.item_type_cols.value + Columns.fee_mean_cols.value]
     test_id = test[Columns.iden_columns.value]
 
     return train_x, train_y, test_x, test_id

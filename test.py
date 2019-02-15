@@ -11,6 +11,12 @@ import numpy as np
 
 
 if __name__ == "__main__":
+    st = "b41d5c9c4-4.json"
+    petid, imgnum  = st.split("-", 1)
+    print(petid, imgnum.strip(".json"))
+
+    sys.exit()
+
 
     print(1%3)
     print(type(np.random.random_integers(25,100)))

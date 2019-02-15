@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 from enum import Enum
+import datetime
 from sklearn.feature_selection import VarianceThreshold
 import time
 import numpy as np
@@ -133,7 +134,6 @@ def read_data():
     train = train.set_index("PetID").join(train_metadata.set_index("PetID")).reset_index()
     test = test.set_index("PetID").join(test_metadata.set_index("PetID")).reset_index()
 
-
     return train, test
 
 
@@ -245,58 +245,125 @@ def get_all_img_meta(type, recalc):
         else:
             path = Paths.base.value+"test_metadata/"
 
-        cols = ["PetID"]
-        df_imgs = pd.DataFrame(columns=cols)
-
-        images = [f for f in sorted(os.listdir(path)) if
+        all_images = [f for f in sorted(os.listdir(path)) if
                   (f.endswith(".json") & os.path.isfile(path + f))]
-        i = 0
-        for img in images:
-            PetID, imgnum = img.split("-", 1)
-            imgnum = imgnum.strip(".json")
-            #PetID = img[:-7]
-            # print(i, PetID,k, img, (img[-6:-5]), l_petid)
+        len_images = len(all_images)
 
-            with open(path + img, encoding="utf8") as json_data:
-                data = json.load(json_data)
-            vertex_x = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x', -1)
-            vertex_y = data['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y', -1)
-            bounding_confidence = data['cropHintsAnnotation']['cropHints'][0].get('confidence', -1)
-            bounding_importance_frac = data['cropHintsAnnotation']['cropHints'][0].get('importanceFraction', -1)
-            dominant_blue = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('blue', 255)
-            dominant_green = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('green', 255)
-            dominant_red = data['imagePropertiesAnnotation']['dominantColors']['colors'][0]['color'].get('red', 255)
-            RGBint = (dominant_red << 16) + (dominant_green << 8) + dominant_blue
-            dominant_pixel_frac = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('pixelFraction',
-                                                                                                       -1)
-            dominant_score = data['imagePropertiesAnnotation']['dominantColors']['colors'][0].get('score', -1)
+        pets = list(set([f[:f.find("-")] for f in sorted(os.listdir(path)) if
+                  (f.endswith(".json") & os.path.isfile(path + f))]))
 
-            if data.get('labelAnnotations'):
-                label_description = ""
-                label_score = 0
-                j = 1
-                for ann in data.get('labelAnnotations'):
-                    label_score = (ann.get('score', 0) + label_score) / j
-                    if ann.get("description"):
-                        label_description = label_description + " " + ann.get("description", "")
-                    j += 1
-            else:
-                label_description = ""
-                label_score = 0
-            si = imgnum
-            cols2 = ["Vertex_X_"+si, "Vertex_Y_"+si, "Bound_Conf_"+si, "Bound_Imp_Frac_"+si,
-                      "Dom_Blue_"+si, "Dom_Green_"+si, "Dom_Red_"+si,
-                "RGBint_"+si, "Dom_Px_Fr_"+si, "Dom_Scr_"+si, "Lbl_Scr_"+si]
-            df_imgs.loc[i, cols + cols] = [PetID, vertex_x, vertex_y, bounding_confidence, bounding_importance_frac, RGBint,
-                                    dominant_blue, dominant_green, dominant_red,
-                                    dominant_pixel_frac, dominant_score, label_score, label_description]
-            i = i+1
-        #print(df_imgs.head())
-        #df_imgs.to_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv", index=False)
+        np_pets = np.asarray(pets).reshape(len(pets), 1)
+        df_cols = ["P_RGB", "P_Dom_Px_Frac", "P_Dom_Score", "P_Vertex_X", "PVertex_Y",
+                 "P_Bound_Conf", "P_Bound_Imp_Frac", "P_Label_Score", "P_Label_Description"]
+        np_data = np.zeros((len(pets),len(df_cols)))
+        data = np.concatenate((np_pets,np_data), axis=1 )
+        df_pet_img_meta = pd.DataFrame(columns=["PetID"]+df_cols, data=data)
+        df_pet_img_meta["P_Label_Description"] = ""
+        df_pet_img_meta.set_index("PetID", inplace=True)
+        #print(df_pet_img_meta.head())
+
+        h = 1
+        for pet in pets:
+            images = [k for k in all_images if pet in k]
+
+            p_rgb = 0
+            p_dominant_pixel_frac = 0
+            p_dominant_score = 0
+            p_vertex_x = 0
+            p_vertex_y = 0
+            p_bounding_confidence = 0
+            p_bounding_importance_frac = 0
+            p_label_score = 0
+            p_label_description = ""
+            num_of_images = len(images)
+
+
+
+            for img in images:
+                imgnum = img.split("-", 1)[1].strip(".json")
+                with open(path + img, encoding="utf8") as json_data:
+                    image = json.load(json_data)
+
+                print(img, h, len_images)
+                h = h+1
+
+                i_rgb = 0
+                i2_rgb = 0
+                i_dominant_pixel_frac = 0
+                i_dominant_score = 0
+                i_label_score = 0
+                i_label_description = ""
+                i_num_colors = 0
+                i_num_label_annotations = 0
+
+                i_vertex_x = image['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('x', 0)
+                i_vertex_y = image['cropHintsAnnotation']['cropHints'][0]['boundingPoly']['vertices'][2].get('y', 0)
+                i_bounding_confidence = image['cropHintsAnnotation']['cropHints'][0].get('confidence', 0)
+                i_bounding_importance_frac = image['cropHintsAnnotation']['cropHints'][0].get('importanceFraction', 0)
+
+                if image.get('imagePropertiesAnnotation').get("dominantColors").get("colors"):
+                    i_num_colors = len(image.get('imagePropertiesAnnotation').get("dominantColors").get("colors"))
+                    t_rgb = 0
+                    for color in image.get('imagePropertiesAnnotation').get("dominantColors").get("colors"):
+                        #print(color, color.get("color").get("red"))
+                        r = color.get("color").get('red', 255)
+                        g = color.get("color").get('green', 255)
+                        b = color.get("color").get('blue', 255)
+                        #rgbint = ((r << 16) + (g << 8) + b)
+                        m_rgb = (r**2 + g**2 + b**2)/3
+                        t_rgb = t_rgb + m_rgb
+                        i_dominant_pixel_frac = i_dominant_pixel_frac + color.get('pixelFraction', 0)
+                        i_dominant_score = i_dominant_score + color.get('score', 0)
+
+                    if i_num_colors>0:
+                        if t_rgb > 0:
+                            i_rgb = np.sqrt(t_rgb/i_num_colors)
+                        if i_dominant_score > 0:
+                            i_dominant_score = i_dominant_score/i_num_colors
+                    #print(i_rgb, i_dominant_pixel_frac, i_dominant_score)
+                if image.get('labelAnnotations'):
+                    i_num_label_annotations = len(image.get('labelAnnotations'))
+                    for ann in image.get('labelAnnotations'):
+                        i_label_score = ann.get('score', 0) + i_label_score
+                        if ann.get("description"):
+                            i_label_description = i_label_description + " " + ann.get("description", "")
+
+                    if i_num_label_annotations>0:
+                        if i_label_score > 0:
+                            i_label_score = i_label_score/i_num_label_annotations
+
+                    #print(i_label_score, i_label_description)
+
+                p_rgb = p_rgb + i_rgb**2
+                p_dominant_pixel_frac = p_dominant_pixel_frac + i_dominant_pixel_frac
+                p_dominant_score = p_dominant_score + i_dominant_score
+                p_vertex_x = p_vertex_x + i_vertex_x
+                p_vertex_y = p_vertex_y + i_vertex_y
+                p_bounding_confidence = p_bounding_confidence + i_bounding_confidence
+                p_bounding_importance_frac = p_bounding_importance_frac + i_bounding_importance_frac
+                p_label_score = p_label_score + i_label_score
+                p_label_description = p_label_description + " " + i_label_description
+
+            p_rgb = np.sqrt(p_rgb/num_of_images)
+            p_dominant_pixel_frac = p_dominant_pixel_frac/num_of_images
+            p_dominant_score = p_dominant_score/num_of_images
+            p_vertex_x = p_vertex_x/num_of_images
+            p_vertex_y = p_vertex_y/num_of_images
+            p_bounding_confidence = p_bounding_confidence/num_of_images
+            p_bounding_importance_frac = p_bounding_importance_frac/num_of_images
+            p_label_score = p_label_score/num_of_images
+
+
+            df_pet_img_meta.loc[pet, df_cols] = [p_rgb, p_dominant_pixel_frac, p_dominant_score, p_vertex_x, p_vertex_y,
+                                                 p_bounding_confidence, p_bounding_importance_frac, p_label_score,
+                                                 p_label_description]
+            #print(df_pet_img_meta.head())
+        print(df_pet_img_meta.head())
+        df_pet_img_meta.reset_index().to_csv(Paths.base.value + type + "_metadata_all.csv", index=False)
     elif recalc == 0:
-        pass#df_imgs = pd.read_csv(Paths.base.value + type + "_metadata-" + img_num + ".csv")
+        df_pet_img_meta = pd.read_csv(Paths.base.value + type + "_metadata_all.csv")
 
-    return df_imgs
+    return df_pet_img_meta
 
 def set_pet_breed(b1, b2):
     if (b1 in (0, 307)) & (b2 in (0, 307)):
@@ -326,8 +393,12 @@ if __name__ == "__main__":
     #train, test = read_data()
     #print(train.corr())
     #print(sys.platform)
-    print(FileNum.train_metadata_files.value)
-    print(get_all_img_meta("train", 1))
+    #get_all_img_meta("train", 1)
+    start = datetime.datetime.now()
+    from joblib import Parallel, delayed
+    dfs_train = get_all_img_meta("train", 1)
+    end = datetime.datetime.now()
+    print(start, end)
     sys.exit()
     train, test = read_data()
 
