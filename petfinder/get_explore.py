@@ -10,6 +10,9 @@ from sklearn.feature_selection import VarianceThreshold
 import time
 import numpy as np
 import glob
+from petfinder.ownestimator import RatioOrdinalClassfier
+from sklearn.metrics import cohen_kappa_score
+import lightgbm as lgb
 
 
 class Paths(Enum):
@@ -17,6 +20,8 @@ class Paths(Enum):
         base = "/home/mesut/kaggle/petfinder.my/"
     else:
         base = "C:/datasets/petfinder.my/"
+
+
 
 class FileNum(Enum):
     train_image_files = sorted(glob.glob(Paths.base.value+"train_images/*.jpg"))
@@ -396,11 +401,78 @@ if __name__ == "__main__":
     #get_all_img_meta("train", 1)
     start = datetime.datetime.now()
     from joblib import Parallel, delayed
-    dfs_train = get_all_img_meta("train", 1)
+
+    train = pd.read_csv(Paths.base.value + "train/train.csv")
+    train.drop(["Name", "Description", "PetID", "RescuerID"], axis=1, inplace=True)
+    y = train["AdoptionSpeed"].values.reshape((len(train), 1))
+    #print(y)
+    X = train.drop(["AdoptionSpeed"], axis=1).values
+
+    from sklearn.metrics import accuracy_score, cohen_kappa_score
+    # params = {
+    #           'boosting_type': 'gbdt',
+    #           'metric': 'cohen_kappa_score',
+    #           'max_depth': 10,
+    #           'num_leaves': 350,
+    #           'learning_rate': 0.01,
+    #           'bagging_fraction': 0.85,
+    #           'feature_fraction': 0.8,
+    #           'min_split_gain': 0.01,
+    #           'min_child_samples': 150,
+    #           'min_child_weight': 0.1,
+    #           'verbosity': -1,
+    #           'data_random_seed': 3,
+    #           'n_jobs': 4,
+    #           # 'lambda_l2': 0.05,
+    #           'num_rounds': 10000,}
+    # rnk = lgb.LGBMRanker(**params)
+    # print(type(y), y.shape)
+    # ser = pd.Series(y)
+    # print(ser.shape)
+    # rnk.fit(X,y, group=ser)
+    # pred = rnk.predict(X)
+    # print(accuracy_score(y, pred))
+    # #rnk.predict()
+
+    params = {
+              'boosting_type': 'gbdt',
+              'metric': 'cohen_kappa_score',
+              'max_depth': 10,
+              'num_leaves': 350,
+              'learning_rate': 0.01,
+              'bagging_fraction': 0.85,
+              'feature_fraction': 0.8,
+              'min_split_gain': 0.01,
+              'min_child_samples': 150,
+              'min_child_weight': 0.1,
+              'verbosity': -1,
+              'data_random_seed': 3,
+              'n_jobs': 4,
+              # 'lambda_l2': 0.05,
+              }
+    est = lgb.LGBMClassifier(**params)
+
+    clf = RatioOrdinalClassfier(estimator=est)
+    clf.fit(X,y)
+    pred = clf.predict(X)
+    print(pred)
+    #pred = clf.predict_proba(X)
+
+
+
+
+    print(cohen_kappa_score(y, pred))
+    sys.exit()
+    print(pred)
     end = datetime.datetime.now()
     print(start, end)
+
+
+
+
+    print(accuracy_score(y, pred))
     sys.exit()
-    train, test = read_data()
+
 
     train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
 

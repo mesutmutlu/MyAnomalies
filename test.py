@@ -11,9 +11,14 @@ import numpy as np
 
 
 if __name__ == "__main__":
-    st = "b41d5c9c4-4.json"
-    petid, imgnum  = st.split("-", 1)
-    print(petid, imgnum.strip(".json"))
+    emp = np.empty([3, 3])
+    print(emp)
+    print(emp[:,1:2])
+
+    print(np.random.randn(5))
+    df = pd.DataFrame(columns=["in"], data=[0,1,2,3,4,5])
+    import math
+    print(round(math.ceil(df["in"].median())))
 
     sys.exit()
 
