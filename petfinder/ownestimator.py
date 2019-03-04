@@ -2,6 +2,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 import lightgbm as lgb
 import numpy as np
 import joblib
+import os
 
 class RatioOrdinalClassfier(BaseEstimator, ClassifierMixin):
     """An example of classifier"""
@@ -42,15 +43,11 @@ class RatioOrdinalClassfier(BaseEstimator, ClassifierMixin):
             est.fit(X, yt.ravel())
             filename = "ownestimatormodel_"+str(yi)+".sav"
             joblib.dump(est, filename)
-            self.estimators_.append(est)
-        print(self.estimators_)
         return self
 
     def predict_proba(self, X):
         i = 0
         for yi in self.sorted_classes_[:-1]:
-            print("estimator",yi,"-------")
-            print(self.estimators_[yi])
             filename = "ownestimatormodel_" + str(yi) + ".sav"
             est = joblib.load(filename)
             yt_proba = est.predict_proba(X)[:, 1:2]
@@ -62,13 +59,10 @@ class RatioOrdinalClassfier(BaseEstimator, ClassifierMixin):
                 # print(yt_proba.shape, self.probas_.shape)
                 self.probas_ = np.concatenate((self.probas_, yt_proba), axis=1)
                 # print(yt_proba.shape, self.probas_.shape)
-            print("--------", yi, "--------")
-            print(yt_proba)
             i += 1
-
-        print(self.probas_)
             # print(self.probas_.shape)
             # print(self.probas_)
+            os.remove(filename)
 
     def fit_predict(self, X, y):
         """

@@ -222,6 +222,11 @@ def runLGB(train_X, train_y, test_X, test_y, test_X2, params):
                       valid_sets=watchlist,
                       verbose_eval=verbose_eval,
                       early_stopping_rounds=early_stop)
+    #lgb.plot_importance(booster=model)
+    print("feature names")
+    print(model.feature_name())
+    print("feature importances")
+    print(model.feature_importance(importance_type = "gain"))
     #print('Predict 1/2')
     pred_test_y = model.predict(test_X, num_iteration=model.best_iteration)
     optR = OptimizedRounder()
@@ -235,7 +240,7 @@ def runLGB(train_X, train_y, test_X, test_y, test_X2, params):
     #print("QWK = ", qwk)
     #print('Predict 2/2')
     pred_test_y2 = model.predict(test_X2, num_iteration=model.best_iteration)
-    return pred_test_y.reshape(-1, 1), pred_test_y2.reshape(-1, 1), model.feature_importance(), coefficients, qwk
+    return pred_test_y.reshape(-1, 1), pred_test_y2.reshape(-1, 1), model.feature_importance(), coefficients, qwk, model.feature_importance(importance_type = "gain")
 
 
 def by_regressor_rs(train, test, y_train, runALG, metric, name, cv, i, id_test):
@@ -305,8 +310,10 @@ def by_regressor(train, test, y_train, runALG, prms, metric, name, cv, i, id_tes
 if __name__ == "__main__":
 
     train, test = read_data()
-    x_train, y_train, x_test, id_test = prepare_data(train, test)
-    print(x_train.columns.values)
+    x_train = train.drop(["Name", "Description", "AdoptionSpeed", "PetID", "Lbl_Img", "RescuerID"], axis = 1)
+    y_train = train["AdoptionSpeed"]
+    x_test = test.drop(["Name", "Description", "PetID", "Lbl_Img", "RescuerID"], axis = 1)
+    id_test = train["PetID"]
     if 1 == 1:
         params = {'application': 'regression',
                   'boosting': 'gbdt',
@@ -327,36 +334,7 @@ if __name__ == "__main__":
                   # 'lambda_l2': 0.05,
                   'num_rounds': 10000,
                   #'categorical_feature':Columns.ind_num_cat_columns.value
-                  }
-        # print("with all columns", datetime.datetime.now())
-        # x_train_a = x_train
-        # x_test_a = x_test
-        # submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-        #
-        # cols = Columns.ind_cont_columns.value + Columns.ind_num_cat_columns.value
-        # for c in cols:
-        #     print("without" + c, datetime.datetime.now())
-        #     x_train_a = x_train.drop([c], axis=1)
-        #     x_test_a = x_test.drop([c], axis=1)
-        #     submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
+         }
 
-        print("without img_num_cols_1", datetime.datetime.now())
-        x_train_a = x_train.drop(Columns.img_num_cols_1.value, axis=1)
-        x_test_a = x_test.drop(Columns.img_num_cols_1.value, axis=1)
-        submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-
-        print("without img_num_cols_2", datetime.datetime.now())
-        x_train_a = x_train.drop(Columns.img_num_cols_2.value, axis=1)
-        x_test_a = x_test.drop(Columns.img_num_cols_2.value, axis=1)
-        submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-
-        print("without img_num_cols_3", datetime.datetime.now())
-        x_train_a = x_train.drop(Columns.img_num_cols_3.value, axis=1)
-        x_test_a = x_test.drop(Columns.img_num_cols_3.value, axis=1)
-        submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-
-        print("without iann_cols", datetime.datetime.now())
-        x_train_a = x_train.drop(Columns.iann_cols.value, axis=1)
-        x_test_a = x_test.drop(Columns.iann_cols.value, axis=1)
-        submission = by_regressor(x_train_a, x_test_a, y_train, runLGB, params, rmse, 'lgb', 5, 2, id_test)
-        print("ended", datetime.datetime.now())
+        by_regressor(x_train, x_test, y_train, runLGB,
+                     params, rmse, 'lgb', 5, 2, id_test)

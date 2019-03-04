@@ -403,37 +403,99 @@ if __name__ == "__main__":
     from joblib import Parallel, delayed
 
     train = pd.read_csv(Paths.base.value + "train/train.csv")
+    import math
+    train_b = train[["Age", "Fee", "Quantity", "VideoAmt", "PhotoAmt"]]
+    num_charts = len(train_b.columns.values.tolist())
+    num_line = math.ceil(num_charts/3)
+    print("y", num_line, num_charts)
+    fig, axes = plt.subplots(num_line, 3)
+    print("y")
+    i=0
+    for c in train_b.columns.values.tolist():
+        print(c)
+        n_col = i%3
+        n_line = math.floor(i/3)
+        sns.boxplot(data=train_b, y=c, ax=axes[n_line, n_col])
+        #plt.show()
+        i += 1
+    plt.show()
+    sys.exit()
+
+    dr = []
+
+    grp = train.groupby('Type',as_index=False)['Fee'].mean()
+
+    print(grp)
+    print(grp.sort_values(by=["Fee"]))
+
+    sys.exit()
     train.drop(["Name", "Description", "PetID", "RescuerID"], axis=1, inplace=True)
+
+    import lightgbm as lgb
+
+    params = {'application': 'regression',
+              'boosting': 'gbdt',
+              'metric': 'rmse',
+              'max_depth': 10,
+              'num_leaves': 350,
+              'learning_rate': 0.01,
+              'bagging_fraction': 0.85,
+              'feature_fraction': 0.8,
+              'min_split_gain': 0.01,
+              'min_child_samples': 150,
+              'min_child_weight': 0.1,
+              'verbosity': -1,
+              'data_random_seed': 3,
+              'early_stop': 100,
+              'verbose_eval': False,
+              'n_jobs': 4,
+              # 'lambda_l2': 0.05,
+              'num_rounds': 10000,
+              'importance_type': 'gain'}
+    num_rounds = params.pop('num_rounds')
+    verbose_eval = params.pop('verbose_eval')
+
+    kf = RepeatedStratifiedKFold(n_splits=n_splits, random_state=42, n_repeats=n_repeats)
+    fold_splits = kf.split(train, target)
+    cv_scores = []
+    qwk_scores = []
+    pred_full_test = 0
+    pred_train = np.zeros((train.shape[0], n_splits * n_repeats))
+    all_coefficients = np.zeros((n_splits * n_repeats, 4))
+    feature_importance_df = pd.DataFrame()
+    i = 1
+    for dev_index, val_index in fold_splits:
+        # print('Started ' + label + ' fold ' + str(i) + '/'+str(n_splits*n_repeats))
+        if isinstance(train, pd.DataFrame):
+            dev_X, val_X = train.iloc[dev_index], train.iloc[val_index]
+            dev_y, val_y = target.iloc[dev_index], target.iloc[val_index]
+        else:
+            dev_X, val_X = train[dev_index], train[val_index]
+            dev_y, val_y = target[dev_index], target[val_index]
+
+    d_train = lgb.Dataset(train_X, label=train_y)
+    d_valid = lgb.Dataset(test_X, label=test_y)
+    watchlist = [d_train, d_valid]
+    early_stop = None
+    if params.get('early_stop'):
+        early_stop = params.pop('early_stop')
+    model = lgb.train(params,
+                      train_set=d_train,
+                      num_boost_round=num_rounds,
+                      valid_sets=watchlist,
+                      verbose_eval=verbose_eval,
+                      early_stopping_rounds=early_stop)
+
+    print("--------feature importances by split--------")
+    print(lgb.plot_importance(booster=model))
+
+
+
     y = train["AdoptionSpeed"].values.reshape((len(train), 1))
     #print(y)
     X = train.drop(["AdoptionSpeed"], axis=1).values
 
     from sklearn.metrics import accuracy_score, cohen_kappa_score
-    # params = {
-    #           'boosting_type': 'gbdt',
-    #           'metric': 'cohen_kappa_score',
-    #           'max_depth': 10,
-    #           'num_leaves': 350,
-    #           'learning_rate': 0.01,
-    #           'bagging_fraction': 0.85,
-    #           'feature_fraction': 0.8,
-    #           'min_split_gain': 0.01,
-    #           'min_child_samples': 150,
-    #           'min_child_weight': 0.1,
-    #           'verbosity': -1,
-    #           'data_random_seed': 3,
-    #           'n_jobs': 4,
-    #           # 'lambda_l2': 0.05,
-    #           'num_rounds': 10000,}
-    # rnk = lgb.LGBMRanker(**params)
-    # print(type(y), y.shape)
-    # ser = pd.Series(y)
-    # print(ser.shape)
-    # rnk.fit(X,y, group=ser)
-    # pred = rnk.predict(X)
-    # print(accuracy_score(y, pred))
-    # #rnk.predict()
-
     params = {
               'boosting_type': 'gbdt',
               'metric': 'cohen_kappa_score',
@@ -448,6 +510,34 @@ if __name__ == "__main__":
               'verbosity': -1,
               'data_random_seed': 3,
               'n_jobs': 4,
+              # 'lambda_l2': 0.05,
+              'num_rounds': 10000,}
+    rnk = lgb.LGBMRanker(**params)
+    print(type(y), y.shape)
+    print(y.shape)
+    print(isinstance(y.ravel()[0], int))
+    print(y.ravel())
+    rnk.fit(X,y.ravel(), group=np.unique(y.ravel()))
+    pred = rnk.predict(X)
+    print(accuracy_score(y, pred))
+    #rnk.predict()
+
+    sys.exit()
+    params = {
+              'boosting_type': 'gbdt',
+              'metric': 'cohen_kappa_score',
+              'max_depth': 10,
+              'num_leaves': 350,
+              'learning_rate': 0.01,
+              'bagging_fraction': 0.85,
+              'feature_fraction': 0.8,
+              'min_split_gain': 0.01,
+              'min_child_samples': 150,
+              'min_child_weight': 0.1,
+              'verbosity': -1,
+              'data_random_seed': 3,
+              'n_jobs': 4,
+                'objective':'binary',
               # 'lambda_l2': 0.05,
               }
     est = lgb.LGBMClassifier(**params)
