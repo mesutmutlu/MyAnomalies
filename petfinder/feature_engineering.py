@@ -9,15 +9,8 @@ import datetime
 import featuretools as ft
 import numpy as np
 import sys
-from keras.layers import Dense, Input, Conv2D, LSTM, MaxPool2D, UpSampling2D
-from sklearn.model_selection import train_test_split
-from keras.callbacks import EarlyStopping
-from keras.utils import to_categorical
-from numpy import argmax, array_equal
-from keras.models import Model, Sequential
 from random import randint
 import pandas as pd
-from keras import regularizers
 from sklearn import preprocessing
 from sklearn.feature_selection import VarianceThreshold
 from petfinder.train_regressor import OptimizedRounder
@@ -322,37 +315,20 @@ def finalize_data(train, test):
 def recursive_feature_removal():
     pass
 
+def group_x_by_y(df, x, y, type):
+    df_g = df.groupby(y).agg({x:type})
+    df_g.rename({x: x+"_"+type+"_by_"+y}, axis='columns', inplace=True)
+    df = df.set_index(y).join(df_g).reset_index()
+    return df
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
 
-    train, test = read_data()
-    c = Columns.ind_num_cat_columns.value.copy()
-    print(c)
-    c2 = Columns.ind_cont_columns.value.copy()
-    c2.remove("NameLength")
-    c2.remove("DescLength")
-    train_x = train[c2 + c]
-    train_x.fillna(0, inplace=True)
-    train_y = train[["AdoptionSpeed"]]
-    #tsne(train_x, train_y)
-    autoenc(pd.concat([train_x, train_y], axis=1))
+    train = pd.read_csv(Paths.base.value + "train/train.csv")
 
-
-    train, test = prepare_data(train, test)
-    train, test = add_features(train, test)
-    x_train, y_train, x_test, id_test = finalize_data(train, test)
-
-    print(x_train.shape)
-    print(x_train.columns.values)
-    print(y_train.shape)
-    print(y_train.columns.values)
-    print(x_test.shape)
-    print(x_test.columns.values)
-    print(id_test.shape)
-    print(id_test.columns.values)
+    print(group_x_by_y(train, "Age", "Breed1", "std"))
 
     sys.exit()
 

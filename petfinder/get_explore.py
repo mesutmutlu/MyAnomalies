@@ -9,6 +9,7 @@ import datetime
 from sklearn.feature_selection import VarianceThreshold
 import time
 import numpy as np
+import scipy as sp
 import glob
 from petfinder.ownestimator import RatioOrdinalClassfier
 from sklearn.metrics import cohen_kappa_score
@@ -388,6 +389,34 @@ def set_pet_breed(b1, b2):
     else:
         return 4
 
+def stdType(min, max, mean, std, value):
+    if min <= value < mean - 5 * std:
+        return 0
+    elif  mean -5*std <= value < mean - 4*std:
+        return 1
+    elif mean -4*std <= value < mean - 3*std:
+        return 2
+    elif mean - 3*std <= value < mean - 2*std:
+        return 3
+    elif mean - 2*std <= value < mean - std:
+        return 4
+    elif mean - std <= value < mean:
+        return 5
+    elif mean <= value < mean + std:
+        return 6
+    elif mean + std <= value < mean + 2*std:
+        return 7
+    elif mean + 2*std <= value < mean + 3*std:
+        return 8
+    elif mean + 3*std <= value < mean + 4*std:
+        return 9
+    elif mean + 4*std <= value < mean + 5*std:
+        return 10
+    elif mean + 5*std <= value <= max:
+        return 11
+
+
+
 
 
 if __name__ == "__main__":
@@ -402,193 +431,163 @@ if __name__ == "__main__":
     start = datetime.datetime.now()
     from joblib import Parallel, delayed
 
+    cat_cols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
+                           "Vaccinated", "Dewormed", "Sterilized", "Health", "State"]
+
+
     train = pd.read_csv(Paths.base.value + "train/train.csv")
-    import math
-    train_b = train[["Age", "Fee", "Quantity", "VideoAmt", "PhotoAmt"]]
-    num_charts = len(train_b.columns.values.tolist())
-    num_line = math.ceil(num_charts/3)
-    print("y", num_line, num_charts)
-    fig, axes = plt.subplots(num_line, 3)
-    print("y")
-    i=0
-    for c in train_b.columns.values.tolist():
-        print(c)
-        n_col = i%3
-        n_line = math.floor(i/3)
-        sns.boxplot(data=train_b, y=c, ax=axes[n_line, n_col])
-        #plt.show()
-        i += 1
-    plt.show()
-    sys.exit()
-
-    dr = []
-
-    grp = train.groupby('Type',as_index=False)['Fee'].mean()
-
-    print(grp)
-    print(grp.sort_values(by=["Fee"]))
-
-    sys.exit()
     train.drop(["Name", "Description", "PetID", "RescuerID"], axis=1, inplace=True)
+    print(train.head())
+    x_train = train.drop("AdoptionSpeed", axis=1)
+    y_train = train["AdoptionSpeed"]
 
-    import lightgbm as lgb
 
-    params = {'application': 'regression',
-              'boosting': 'gbdt',
-              'metric': 'rmse',
-              'max_depth': 10,
-              'num_leaves': 350,
-              'learning_rate': 0.01,
-              'bagging_fraction': 0.85,
-              'feature_fraction': 0.8,
-              'min_split_gain': 0.01,
-              'min_child_samples': 150,
-              'min_child_weight': 0.1,
-              'verbosity': -1,
-              'data_random_seed': 3,
-              'early_stop': 100,
-              'verbose_eval': False,
-              'n_jobs': 4,
-              # 'lambda_l2': 0.05,
-              'num_rounds': 10000,
-              'importance_type': 'gain'}
-    num_rounds = params.pop('num_rounds')
-    verbose_eval = params.pop('verbose_eval')
 
-    kf = RepeatedStratifiedKFold(n_splits=n_splits, random_state=42, n_repeats=n_repeats)
-    fold_splits = kf.split(train, target)
-    cv_scores = []
-    qwk_scores = []
-    pred_full_test = 0
-    pred_train = np.zeros((train.shape[0], n_splits * n_repeats))
-    all_coefficients = np.zeros((n_splits * n_repeats, 4))
-    feature_importance_df = pd.DataFrame()
-    i = 1
-    for dev_index, val_index in fold_splits:
-        # print('Started ' + label + ' fold ' + str(i) + '/'+str(n_splits*n_repeats))
-        if isinstance(train, pd.DataFrame):
-            dev_X, val_X = train.iloc[dev_index], train.iloc[val_index]
-            dev_y, val_y = target.iloc[dev_index], target.iloc[val_index]
+    from keras.datasets import reuters
+    from keras import models, layers
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from keras.utils.np_utils import to_categorical
+
+    y_train = to_categorical(np.array(y_train.values))
+    #from sklearn.preprocessing import OneHotEncoder
+    from sklearn.preprocessing import LabelEncoder
+
+    le = LabelEncoder()
+    x_train['State'] = le.fit_transform(x_train['State'])
+
+    #enc = OneHotEncoder(handle_unknown='ignore')
+    cat = np.array([])
+    for c in cat_cols:
+        print(datetime.datetime.now(), c)
+        t_cat = to_categorical(x_train[c])
+        if cat.size == 0:
+            cat = t_cat
         else:
-            dev_X, val_X = train[dev_index], train[val_index]
-            dev_y, val_y = target[dev_index], target[val_index]
+            cat = np.concatenate((cat, t_cat), axis=1)
 
-    d_train = lgb.Dataset(train_X, label=train_y)
-    d_valid = lgb.Dataset(test_X, label=test_y)
-    watchlist = [d_train, d_valid]
-    early_stop = None
-    if params.get('early_stop'):
-        early_stop = params.pop('early_stop')
-    model = lgb.train(params,
-                      train_set=d_train,
-                      num_boost_round=num_rounds,
-                      valid_sets=watchlist,
-                      verbose_eval=verbose_eval,
-                      early_stopping_rounds=early_stop)
+        x_train.drop(c, inplace=True, axis=1)
+        print(cat.shape)
 
-    print("--------feature importances by split--------")
-    print(lgb.plot_importance(booster=model))
+    print(datetime.datetime.now(), "x_train to ndarray")
+    x_train = np.array(x_train.values)
+
+    print(datetime.datetime.now(), "concatenate xtran and cat")
+    x_train = np.concatenate((x_train, cat), axis=1)
+
+    print(datetime.datetime.now(), x_train.shape, y_train.shape)
 
 
 
-    y = train["AdoptionSpeed"].values.reshape((len(train), 1))
-    #print(y)
-    X = train.drop(["AdoptionSpeed"], axis=1).values
+    from sklearn.model_selection import train_test_split
 
-    from sklearn.metrics import accuracy_score, cohen_kappa_score
-    params = {
-              'boosting_type': 'gbdt',
-              'metric': 'cohen_kappa_score',
-              'max_depth': 10,
-              'num_leaves': 350,
-              'learning_rate': 0.01,
-              'bagging_fraction': 0.85,
-              'feature_fraction': 0.8,
-              'min_split_gain': 0.01,
-              'min_child_samples': 150,
-              'min_child_weight': 0.1,
-              'verbosity': -1,
-              'data_random_seed': 3,
-              'n_jobs': 4,
-              # 'lambda_l2': 0.05,
-              'num_rounds': 10000,}
-    rnk = lgb.LGBMRanker(**params)
-    print(type(y), y.shape)
-    print(y.shape)
-    print(isinstance(y.ravel()[0], int))
-    print(y.ravel())
-    rnk.fit(X,y.ravel(), group=np.unique(y.ravel()))
-    pred = rnk.predict(X)
-    print(accuracy_score(y, pred))
-    #rnk.predict()
+    partial_x_train, x_val, partial_y_train, y_val = train_test_split(x_train, y_train, test_size=0.33, random_state=42)
 
-    sys.exit()
-    params = {
-              'boosting_type': 'gbdt',
-              'metric': 'cohen_kappa_score',
-              'max_depth': 10,
-              'num_leaves': 350,
-              'learning_rate': 0.01,
-              'bagging_fraction': 0.85,
-              'feature_fraction': 0.8,
-              'min_split_gain': 0.01,
-              'min_child_samples': 150,
-              'min_child_weight': 0.1,
-              'verbosity': -1,
-              'data_random_seed': 3,
-              'n_jobs': 4,
-                'objective':'binary',
-              # 'lambda_l2': 0.05,
-              }
-    est = lgb.LGBMClassifier(**params)
+    print(x_train)
+    model = models.Sequential()
+    model.add(layers.Dense(1000, activation='relu', input_shape=(partial_x_train.shape[1],)))
+    model.add(layers.Dense(1000, activation='relu'))
+    model.add(layers.Dense(5, activation='softmax'))
 
-    clf = RatioOrdinalClassfier(estimator=est)
-    clf.fit(X,y)
-    pred = clf.predict(X)
-    print(pred)
-    #pred = clf.predict_proba(X)
+    model.compile(optimizer='rmsprop',
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
 
+    if 1 == 1:
+        history = model.fit(partial_x_train, partial_y_train, epochs=20,
+                            batch_size=512, validation_data=(x_val, y_val))
 
+        loss = history.history['loss']
+        val_loss = history.history['val_loss']
 
+        epochs = range(1, len(loss)+1)
 
-    print(cohen_kappa_score(y, pred))
-    sys.exit()
-    print(pred)
-    end = datetime.datetime.now()
-    print(start, end)
+        plt.plot(epochs, loss, 'bo', label='Training loss')
+        plt.plot(epochs, val_loss, 'b', label='Validation loss')
+        plt.title('Training and validation loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.show()
 
+        acc = history.history['acc']
+        val_acc = history.history['val_acc']
 
+        plt.plot(epochs, acc, 'bo', label='Training acc')
+        plt.plot(epochs, val_acc, 'b', label='Validation acc')
+        plt.title('Training and validation acc')
+        plt.xlabel('Epochs')
+        plt.ylabel('Acc')
+        plt.legend()
+        plt.show()
 
+        model.evaluate(x_test, )
 
-    print(accuracy_score(y, pred))
     sys.exit()
 
 
-    train["Pet_Breed"] = train.apply(lambda x: set_pet_breed(x['Breed1'], x['Breed2']), axis=1)
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from nltk.corpus import stopwords
 
-    print(len(train))
+    stop_words = set(stopwords.words('english'))
+    tfv = TfidfVectorizer(min_df=4,
+                          strip_accents='unicode', analyzer='word', token_pattern=r'\w{1,}',
+                          ngram_range=(1, 3), use_idf=1, smooth_idf=1, sublinear_tf=1, stop_words='english')
 
-    df = train.groupby("Pet_Breed").agg({'PetID': 'count', 'AdoptionSpeed': 'mean'})
-    print(df)
-    from sklearn.preprocessing import MinMaxScaler
-
-    scaler = MinMaxScaler()
-    scaler.fit(df)
-    print(scaler.transform(df))
-
-
-
-
-    #print(h.sort_values(by=['count', 'mean'],ascending=False))
-
+    # Fit TFIDF
+    train["Description"].fillna("", inplace=True)
+    tfv.fit(list(train["Description"]))
+    X = tfv.transform(train["Description"])
+    print(len(tfv.vocabulary_))
+    #df = pd.DataFrame(data=X.toarray())
+    #print(df )
 
 
-    #sys.exit()
+    sys.exit()
+
+    from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, PowerTransformer
+
+    cols = ["Age", "Fee", "PhotoAmt", "VideoAmt", "Quantity"]
+
+    norm = np.random.normal(0, 0.1, 1000)
+    from scipy.stats import skewtest, normaltest
+
+    print(normaltest(norm))
+    rng = np.random.RandomState(304)
+    qt = QuantileTransformer(output_distribution='normal', random_state=rng)
+    pt = PowerTransformer(method="yeo-johnson")
+
+
+
+    for c in cols:
+        f, axes = plt.subplots(2, 2)
+        axes[0, 0].hist(train[c], bins='auto')
+        axes[0, 0].set_title(c + " notransform:"+str(normaltest(train[c])[1]))
+
+        qt_t = qt.fit_transform(train[c].values.reshape(-1,1))
+        axes[0, 1].hist(qt_t, bins='auto', label=str(normaltest(qt_t)[1]))
+        axes[0, 1].set_title("quantiletransform:"+str(normaltest(qt_t)[1]))
+
+        pt_t = pt.fit_transform(train[c].values.reshape(-1,1))
+        axes[1, 0].hist(pt_t, bins='auto', label=str(normaltest(pt_t)[1]))
+        axes[1, 0].set_title("powertransform:"+str(normaltest(pt_t)[1]))
+
+        log_t = np.log(train[c]+1)
+        axes[1, 1].hist(log_t.dropna().values, bins='auto', label=  str(normaltest(log_t)))
+        axes[1, 1].set_title("logtransform:"+str(normaltest(log_t)[1]))
+        plt.show()
 
 
 
 
 
+    sys.exit()
 
 
+    from sklearn.feature_selection import  chi2
 
+    chir = chi2(train[cat_cols], train["AdoptionSpeed"])
+    chi_data = np.concatenate((chir[0].reshape(len(chir[0]), 1), chir[1].reshape(len(chir[0]), 1)), axis=1)
+    df_chi = pd.DataFrame(index = cat_cols, data= chi_data, columns=["chi2", "pval"])
+    df_chi["Select"] = df_chi["pval"] <0.01
+    print(df_chi)
