@@ -96,3 +96,7 @@ if __name__ == "__main__":
     plt.ylabel('Validation MAE')
     plt.show()
 
+    model = build_model()
+    model.fit(train_data, train_targets, epochs=80, batch_size=16, verbose=0 )
+    test_mse_score, test_mae_score = model.evaluate(test_data, test_targets)
+    print(test_mse_score, test_mae_score)

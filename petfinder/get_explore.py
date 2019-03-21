@@ -434,12 +434,43 @@ if __name__ == "__main__":
     cat_cols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
                            "Vaccinated", "Dewormed", "Sterilized", "Health", "State"]
 
+    from imblearn.over_sampling import SMOTE
+    import random
+    import string
+
+    random_resc = []
+    for i in range (100):
+        rnd = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+        random_resc.append(rnd)
+
+    print(np.asarray(random_resc).reshape(-1,1))
+
 
     train = pd.read_csv(Paths.base.value + "train/train.csv")
+
+    print(train["PetID"], len(train["PetID"][1500]))
+
+    print(len(train), len(train["RescuerID"].unique()))
+    sys.exit()
+
+
+
     train.drop(["Name", "Description", "PetID", "RescuerID"], axis=1, inplace=True)
-    print(train.head())
+    sm = SMOTE(random_state=42, sampling_strategy='auto', k_neighbors=10)
+    X_res, y_res = sm.fit_resample(train.drop("AdoptionSpeed", axis=1), train["AdoptionSpeed"])
+    print(X_res.shape, y_res.reshape(-1,1).shape)
+    train_res =pd.DataFrame(data = np.concatenate([X_res, y_res.reshape(-1,1)], axis=1), columns= train.columns.values.tolist())
+
+    print(train_res.head())
+    tr_f = pd.concat([train, train_res], axis=0)
+
+    tr_f["AdoptionSpeed"].hist()
+    plt.show()
+    sys.exit()
     x_train = train.drop("AdoptionSpeed", axis=1)
     y_train = train["AdoptionSpeed"]
+
+
 
 
 

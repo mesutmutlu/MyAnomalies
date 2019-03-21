@@ -2,6 +2,26 @@ from keras.datasets import reuters
 from keras import models, layers
 import numpy as np
 import  matplotlib.pyplot as plt
+import keras.backend as K
+from sklearn.metrics import  cohen_kappa_score
+import tensorflow as tf
+import sys
+
+
+def kappa_loss(y_true, y_pred):
+    # Create a loss function that adds the MSE loss to the mean of all squared activations of a specific layer
+    print("---------")
+    print(y_true)
+    sess = tf.Session()
+    print('sess.run')
+    print(sess.run(y_true))
+    with sess.as_default():
+        print(y_true.shape)
+        y_true = y_true.eval()
+        y_pred = y_pred.eval()
+    return cohen_kappa_score(y_true, y_pred, weights='quadratic')
+
+    # Return a function
 
 def vectorize_sequences(sequences, dimension=10000):
     results = np.zeros((len(sequences), dimension))
@@ -60,7 +80,7 @@ if __name__ == '__main__':
 
     y_val = one_hot_train_labels[:1000]
     partial_y_train = one_hot_train_labels[1000:]
-    if 1 == 0:
+    if 1 == 1:
         history = model.fit(partial_x_train, partial_y_train, epochs=20,
                             batch_size=512, validation_data=(x_val, y_val))
 
@@ -90,7 +110,13 @@ if __name__ == '__main__':
 
     model.fit(partial_x_train, partial_y_train, epochs=9,
                         batch_size=512, validation_data=(x_val, y_val))
-
+    pred = model.predict_classes(x_val)
+    print(pred)
+    print("--------")
+    print(y_val)
+    print(cohen_kappa_score(pred, train_labels[:1000], weights='quadratic'))
+    #print(history.history)
+    sys.exit()
     results = model.evaluate(x_test, one_hot_test_labels)
     print(results)
 
