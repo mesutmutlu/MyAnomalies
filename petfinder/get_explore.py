@@ -417,10 +417,14 @@ def stdType(min, max, mean, std, value):
 
 
 
-
+def chVal(val, col):
+    if (col == "Health") & (val == 0):
+        return 4
+    else:
+        return val
 
 if __name__ == "__main__":
-
+    import math
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
@@ -431,12 +435,22 @@ if __name__ == "__main__":
     start = datetime.datetime.now()
     from joblib import Parallel, delayed
 
+    chVal(5, "Health")
+    sys.exit()
+    train_df = pd.read_csv(Paths.base.value + "train/train.csv")
     cat_cols = ["Type", "Breed1", "Breed2", "Gender", "Color1", "Color2", "Color3",
                            "Vaccinated", "Dewormed", "Sterilized", "Health", "State"]
+
+    train_df["Overall_Status"] = train_df.apply(lambda x: math.sqrt(int(x["Sterilized"])) + \
+                                                          math.sqrt(int(x["Dewormed"])) + \
+                                                          math.sqrt(int(x["Vaccinated"])) + \
+                                                          math.sqrt(chVal(int(x["Health"]), "Health")), axis=1)
+
 
     from imblearn.over_sampling import SMOTE
     import random
     import string
+    sys.exit()
 
     random_resc = []
     for i in range (100):

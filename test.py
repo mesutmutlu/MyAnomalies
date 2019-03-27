@@ -27,23 +27,25 @@ import sys
 
 
 #y_train_k = to_categorical(y_train_k.values)
+if 1 == 0:
+    y_train_k = np.zeros((len(y_train), 4))
+    i = 0
+    for x in y_train["AdoptionSpeed"].values:
 
-y_train_k = np.zeros((len(y_train), 4))
-i = 0
-for x in y_train["AdoptionSpeed"].values:
+        if x == 1:
+            y_train_k[i, 0:1] = 1
+        elif x == 2:
+            y_train_k[i, 0:2] = 1
+        elif x == 3:
+            y_train_k[i, 0:3] = 1
+        elif x == 4:
+            y_train_k[i, 0:4] = 1
 
-    if x == 1:
-        y_train_k[i, 0:1] = 1
-    elif x == 2:
-        y_train_k[i, 0:2] = 1
-    elif x == 3:
-        y_train_k[i, 0:3] = 1
-    elif x == 4:
-        y_train_k[i, 0:4] = 1
-
-    print(x, y_train_k[i])
-    i += 1
-print(y_train_k)
+        #print(x, y_train_k[i])
+        i += 1
+else:
+    y_train_k = to_categorical(y_train, 5)
+#print(y_train_k)
 
 
 import sys
@@ -93,19 +95,20 @@ from sklearn.model_selection import train_test_split
 
 partial_x_train, x_val, partial_y_train, y_val = train_test_split(x_train_k, y_train_k, test_size=0.20, random_state=42)
 
+print(partial_y_train)
 model = models.Sequential()
 model.add(layers.Dense(int(160), kernel_regularizer=regularizers.l2(0.001), activation='relu', input_shape=(partial_x_train.shape[1],)))
 #model.add(layers.Dropout(0.5))
 model.add(layers.Dense(int(110), kernel_regularizer=regularizers.l2(0.001), activation='relu'))
-#model.add(layers.Dropout(0.5))
+#model.add(layers.Dropout(0.25))
 model.add(layers.Dense(int(77), kernel_regularizer=regularizers.l2(0.001), activation='relu'))
 #model.add(layers.Dropout(0.5))
 model.add(layers.Dense(int(55), kernel_regularizer=regularizers.l2(0.001), activation='relu'))
 #model.add(layers.Dropout(0.5))
-model.add(layers.Dense(4, activation='sigmoid'))
+model.add(layers.Dense(5, activation='sigmoid'))
 
 model.compile(optimizer='rmsprop',
-                  loss='categorical_crossentropy',
+                  loss='binary_crossentropy',
                   metrics=['accuracy'])
 
 
@@ -116,19 +119,22 @@ history=model.fit(partial_x_train, partial_y_train, epochs=10,
 
 
 
-pred_classes = model.predict_classes(x_val)
+pred_classes = model.predict_classes(partial_x_train)
 print("-------class", pred_classes.shape)
 print(pred_classes)
 
-predict = model.predict(x_val)
+predict = model.predict(partial_x_train)
 print("-------predict", predict.shape)
 print(predict)
 
-pred_probas = model.predict_proba(x_val)
+predict_val = model.predict(x_val)
+
+
+pred_probas = model.predict_proba(partial_x_train)
 print("-------probas", pred_probas.shape)
 print(pred_probas)
 
-print(y_val)
+print(partial_y_train)
 
 loss = history.history['loss']
 val_loss = history.history['val_loss']
@@ -154,6 +160,50 @@ plt.ylabel('Acc')
 plt.legend()
 plt.show()
 
+
+
+
+model = models.Sequential()
+model.add(layers.Dense(int(128), activation='relu', input_shape=(predict.shape[1],)))
+model.add(layers.Dropout(0.20))
+model.add(layers.Dense(int(64),  activation='relu'))
+model.add(layers.Dense(int(32),  activation='relu'))
+#model.add(layers.Dropout(0.25))
+model.add(layers.Dense(int(5), activation='sigmoid'))
+
+print(model.summary())
+
+model.compile(optimizer='rmsprop',
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
+
+
+if 1 == 0:
+    pd_par_y_train = pd.DataFrame(data=partial_y_train, columns = ["x_"+str(i) for i in range(4)])
+    for index, row in pd_par_y_train.iterrows():
+        pd_par_y_train["x"] = pd_par_y_train["x_0"] + pd_par_y_train["x_1"] + pd_par_y_train["x_2"] + pd_par_y_train["x_3"]
+
+    pd_y_val = pd.DataFrame(data=y_val, columns = ["x_"+str(i) for i in range(4)])
+    for index, row in pd_y_val.iterrows():
+        pd_y_val["x"] = pd_y_val["x_0"] + pd_y_val["x_1"] + pd_y_val["x_2"] + pd_y_val["x_3"]
+        print(to_categorical(pd_par_y_train["x"].values).shape)
+        print(to_categorical(pd_y_val["x"].values).shape)
+
+print(predict.shape)
+
+
+
+
+
+
+
+history=model.fit(predict, partial_y_train, epochs=30,
+                            batch_size=12, validation_data=(predict_val, y_val), shuffle=False)
+
+pre = model.predict_proba(predict_val)
+print(y_val)
+print("------")
+print(pre)
 
 #true_labels = np.argmax(y_val, axis=1)
 

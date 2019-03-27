@@ -4,6 +4,7 @@ train_dir = os.path.join(imdb_dir, "train")
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import numpy as np
+from keras import models, layers
 
 
 if __name__ == "__main__":
@@ -31,8 +32,13 @@ if __name__ == "__main__":
     tokenizer = Tokenizer(num_words=max_words)
     tokenizer.fit_on_texts(texts)
     sequences = tokenizer.texts_to_sequences(texts)
+    print("sequences fff")
+    print(sequences)
     word_index = tokenizer.word_index
+
     print("Found %s unique tokens." % len(word_index))
+    print("word_index")
+    print(word_index)
 
     data = pad_sequences(sequences, maxlen = maxlen)
 
@@ -50,3 +56,34 @@ if __name__ == "__main__":
     x_val = data[training_samples: training_samples+validation_samples]
     y_val = labels[training_samples: training_samples+validation_samples]
 
+    glove_dir = "C:/datasets/aclImdb/glove.6B"
+
+    embeddings_index = {}
+    f = open(os.path.join(glove_dir, "glove.6B.100d.txt"), encoding="utf8")
+
+    for line in f:
+        values = line.split()
+        word = values[0]
+        coefs = np.asarray(values[1:], dtype="float32")
+        embeddings_index[word] = coefs
+    f.close()
+
+    print("Found %s word vectors." % len(embeddings_index))
+    #print(embeddings_index)
+
+    embedding_dim = 100
+
+    embedding_matrix = np.zeros((max_words, embedding_dim))
+
+    for word, i in word_index.items():
+        if i < max_words:
+            embedding_vector = embeddings_index.get(word)
+            if embedding_vector is not None :
+                embedding_matrix[i] = embedding_vector
+
+    model = models.Sequential()
+    model.add(layers.Embedding(max_words, embedding_dim, input_length=maxlen))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(32, activation="relu"))
+    model.add(layers.Dense(1, activation="sigmoid"))
+    print(model.summary())
