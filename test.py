@@ -2,12 +2,23 @@ import pandas as pd
 from sklearn.feature_selection import mutual_info_classif, chi2
 import numpy as np
 import matplotlib.pyplot as plt
-
+import sys
 
 
 train = pd.read_csv("C:/Users/dtmemutlu/Downloads/train.csv")
 test =  pd.read_csv("C:/Users/dtmemutlu/Downloads/test.csv")
 x_train = train.drop("AdoptionSpeed", axis=1)
+
+result = chi2(train[["Type", "Dewormed"]], train["AdoptionSpeed"].values.reshape(-1, 1))
+
+pvals = []
+for x in result:
+    pvals.append(x[1])
+c = pd.DataFrame(index=["Type", "Dewormed"], columns=["AdoptionSpeed"], data = pvals).sort_values(by=["AdoptionSpeed"], ascending=False)
+print(c)
+
+
+sys.exit()
 y_train = train[["AdoptionSpeed"]]
 x_test = test.drop("PetID", axis=1)
 id_test = test[["PetID"]]

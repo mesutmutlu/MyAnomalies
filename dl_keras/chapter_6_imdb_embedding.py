@@ -87,3 +87,17 @@ if __name__ == "__main__":
     model.add(layers.Dense(32, activation="relu"))
     model.add(layers.Dense(1, activation="sigmoid"))
     print(model.summary())
+
+    #load the pretrained embedding weights, can be also done without these 2 lines
+    model.layers[0].set_weights([embedding_matrix])
+    model.layers[0].trainable = False
+
+    model.compile(optimizer='rmsprop',
+                  loss='binary_crossentropy',
+                  metrics=['acc'])
+
+    history = model.fit(x_train, y_train,
+                        epochs = 10,
+                        batch_size=32,
+                        validation_data=(x_val, y_val))
+    model.save_weights('./output/pre_trained_glove_model.h5')
