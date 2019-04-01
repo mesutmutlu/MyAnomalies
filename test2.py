@@ -31,7 +31,7 @@ print(np_lst[:490].reshape((math.ceil(float(len(np_lst[:490]))/float(10))), 10))
 
 lst = []
 for index, row in chi.iterrows():
-    if (float(row["AdoptionSpeed"])> 0.03):
+    if (float(row["AdoptionSpeed"])> 0.02):
         lst.append(row["Feature"])
 
 print("chi", len(lst), len(chi))

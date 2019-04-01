@@ -6,6 +6,14 @@ import sys
 
 
 train = pd.read_csv("C:/Users/dtmemutlu/Downloads/train.csv")
+
+print(train[1:3])
+
+print([i for i in range(1,3)])
+
+print(train.drop([1,2,3], inplace=True))
+
+sys.exit()
 test =  pd.read_csv("C:/Users/dtmemutlu/Downloads/test.csv")
 x_train = train.drop("AdoptionSpeed", axis=1)
 
