@@ -42,12 +42,12 @@ for train, val in kfold.split(X_train, y_train):
     model.add(layers.Dense(150, activation='relu',
                            kernel_regularizer=regularizers.l2(0.001)))
     model.add(layers.Dropout(0.1))
-    model.add(layers.Dense(1))
+    model.add(layers.Dense(1, activataion="relu"))
     # Compile model
     model.compile(loss='mse', optimizer='rmsprop', metrics=['mae'])
     # Fit the model
-    history = model.fit(X_train.iloc[train].values, y_train.iloc[train].values.ravel(), epochs=200, verbose=0,
-                        batch_size=128, validation_data=(X_train.iloc[val].values, y_train.iloc[val].values.ravel()))
+    history = model.fit(X_train.iloc[train].values, y_train.iloc[train].values.ravel(), epochs=1000, verbose=0,
+                        batch_size=64, validation_data=(X_train.iloc[val].values, y_train.iloc[val].values.ravel()))
     history_dict = history.history
     # collect score and loss values
     # print(history_dict)
@@ -58,9 +58,13 @@ for train, val in kfold.split(X_train, y_train):
 
 pred = model.predict(X_train)
 print(pred.shape)
-print(y_train["time_to_failure"].values.shape)
-print(np.concatenate((y_train["time_to_failure"].values,pred), axis=1))
-print(np.min(pred))
+pred = np.abs(pred)
+print(y_train["time_to_failure"].values.reshape(-1,1))
+pred_df = pd.DataFrame(data=np.concatenate((y_train["time_to_failure"].values.reshape(-1,1),pred), axis=1), columns=["gt", "pr"])
+
+
+
+print(pred_df.to_csv("./output/pred.csv"))
 # sum score and loss values for different CVs
 train_loss = [sum(x) for x in zip(*cv_train_loss)][80:]
 val_loss = [sum(x) for x in zip(*cv_val_loss)][80:]
@@ -87,4 +91,6 @@ plt.legend()
 
 plt.show()
 
+
+print(model.evaluate(X_train, y_train.values.ravel()))
 
