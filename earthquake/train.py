@@ -42,11 +42,11 @@ for train, val in kfold.split(X_train, y_train):
     model.add(layers.Dense(150, activation='relu',
                            kernel_regularizer=regularizers.l2(0.001)))
     model.add(layers.Dropout(0.1))
-    model.add(layers.Dense(1, activataion="relu"))
+    model.add(layers.Dense(1, activation="relu"))
     # Compile model
-    model.compile(loss='mse', optimizer='rmsprop', metrics=['mae'])
+    model.compile(loss='mse', optimizer='adam', metrics=['mae'])
     # Fit the model
-    history = model.fit(X_train.iloc[train].values, y_train.iloc[train].values.ravel(), epochs=1000, verbose=0,
+    history = model.fit(X_train.iloc[train].values, y_train.iloc[train].values.ravel(), epochs=500, verbose=0,
                         batch_size=64, validation_data=(X_train.iloc[val].values, y_train.iloc[val].values.ravel()))
     history_dict = history.history
     # collect score and loss values
