@@ -105,11 +105,11 @@ if __name__ == "__main__":
         r_activation = random.choice(activations)
         r_dropout = random.choice(dropouts)
         start_date = datetime.now()
-
+        print(i, datetime.now(), r_epoch, r_batch_size, r_optimizer, r_activation, r_dropout)
         epoch, batch_size, optimizer, activation, score = \
             fit_eval(X_train, y_train, r_epoch, r_batch_size, r_optimizer, r_activation, r_dropout)
         end_date = datetime.now()
-        print(i, datetime.now(), r_epoch, r_batch_size, r_optimizer, r_activation, r_dropout)
+
         scores.loc[i, "epoch"] = epoch
         scores.loc[i, "batch_size"] = batch_size
         scores.loc[i, "optimizer"] = optimizer
@@ -118,6 +118,6 @@ if __name__ == "__main__":
         scores.loc[i, "start_date"] = start_date
         scores.loc[i, "end_date"] = end_date
 
-    scores.sort_values(by=["score"]).to_csv("./output/scores.csv", index=False)
+    scores.sort_values(by=["score"]).to_csv("./output/2hdscores_150-150units.csv", index=False)
 
 

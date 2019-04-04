@@ -111,8 +111,6 @@ if __name__ == "__main__":
 
         end_date = datetime.now()
 
-        print(i, start_date, end_date, epoch, batch_size, optimizer, activation, score)
-
         scores.loc[i, "epoch"] = epoch
         scores.loc[i, "batch_size"] = batch_size
         scores.loc[i, "optimizer"] = optimizer
