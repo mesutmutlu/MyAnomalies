@@ -237,7 +237,27 @@ def calc_test_features(df_list):
     X_test.to_csv("./output/xtest.csv", index=False)
     return X_test
 
+def get_features():
+    X_train = pd.read_csv(r"C:\datasets\earthquake\xtrain.csv")
+    X_train.drop("Unnamed: 0", inplace=True, axis=1)
+    print(X_train.head())
+    y_train = pd.read_csv(r"C:\datasets\earthquake\ytrain.csv")
+    y_train.drop("Unnamed: 0", inplace=True, axis=1)
+    print(y_train.head())
 
+    X_test = pd.read_csv(r"C:\datasets\earthquake\xtest.csv")
+    # X_test.drop("Unnamed: 0", inplace=True, axis=1)
+    print(X_test.head())
+
+    for c in (X_train.columns.values.tolist()):
+        mean = X_train[c].mean()
+        X_train[c] = X_train[c] - mean
+        X_test[c] = X_test[c] - mean
+        std = X_train[c].std()
+        X_train[c] = X_train[c] / std
+        X_test[c] = X_test[c] / std
+
+    return X_train, y_train, X_test
 
 if __name__ == "__main__":
 
