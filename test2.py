@@ -1,38 +1,29 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import os
+from obspy.signal.trigger import z_detect, classic_sta_lta
+import sys
 
-mic = pd.read_csv(r"C:\Users\dtmemutlu\PycharmProjects\MyAnomalies\df_mic.csv")
-spearman = pd.read_csv(r"C:\Users\dtmemutlu\PycharmProjects\MyAnomalies\spearman_for_continous.csv")
-chi = pd.read_csv(r"C:\Users\dtmemutlu\PycharmProjects\MyAnomalies\chitest_for_categorical.csv")
+base_path = r"C:\datasets\earthquake"
 
-s_lst = []
-for index, row in spearman.iterrows():
-    if (float(row["All"])<=0.15) & (float(row["All"])>=-0.25):
-        s_lst.append(row["Feature"])
+#train = pd.read_csv(os.path.join(base_path, "train/train.csv.010"), header=None)
+#train.columns= ["acoustic_data", "time_to_failure"]
 
-print("spearman", len(s_lst), len(spearman))
-print(s_lst)
-#print(mic)
-m_lst = []
-for index, row in mic.iterrows():
-    if (float(row["importance"])<=0.04):
-        m_lst.append(row["feature"])
+#train.set_index("acoustic_data")
+x = pd.DataFrame(columns=["t"], data=[np.inf, -np.inf, np.NaN])
 
-print("mic", len(m_lst), len(mic))
-print(m_lst)
+print(x["t"].nunique())
 
-i_lst = [value for value in m_lst if value in s_lst]
-print("i_lst", len(i_lst))
-print(i_lst)
-#print(chi)
-np_lst = np.array(i_lst)
-import math
-print(np_lst[:490].reshape((math.ceil(float(len(np_lst[:490]))/float(10))), 10))
+#print(train.index.tolist())
 
-lst = []
-for index, row in chi.iterrows():
-    if (float(row["AdoptionSpeed"])> 0.02):
-        lst.append(row["Feature"])
+sys.exit()
+X_train = None
 
-print("chi", len(lst), len(chi))
-print(lst)
+
+
+segments = int(np.floor(train.shape[0] / rows))
+
+
+for sta_lta in [(500, 10000), (500, 20000), (3333, 6666), (3333, 9999), (5000, 50000), (5000, 100000), (10000, 25000), (10000, 100000)]:
+        X_tr.loc[seg_id, 'classic_sta_'+str(sta_lta[0])+'_lta_'+str(sta_lta[1])+'_mean'] = classic_sta_lta(seg, sta_lta[0], sta_lta[1]).mean()
+        X_tr.loc[seg_id, 'classic_sta_'+str(sta_lta[0])+'_lta_'+str(sta_lta[1])+'_std'] = classic_sta_lta(seg, sta_lta[0], sta_lta[1]).std()
