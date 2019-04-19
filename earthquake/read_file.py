@@ -374,10 +374,36 @@ def get_features():
 
 if __name__ == "__main__":
 
-    get_features()
-    sys.exit()
-    train = pd.read_csv(os.path.join(base_path, "train/train.csv.010"), header=None)
+    path = r"C:\datasets\earthquake\lanl earthquake prep data"
+    X_train = pd.read_csv(os.path.join(path, "xtrain.csv"))
+    print(X_train.head())
+    X_test = pd.read_csv(os.path.join(path, "xtest.csv")).drop("Unnamed: 0", axis=1)
+    print(X_test.head())
 
+    X_train.replace([np.inf, -np.inf], np.nan, inplace=True)
+    X_train.fillna(method="ffill", inplace=True, axis=1)
+    X_train= X_train.astype(np.float32)
+
+    print((np.isfinite(X_train.values)))
+
+    print(X_train.loc[:, X_train.dtypes != np.float32])
+
+    sys.exit()
+
+    for c in (X_train.columns.values.tolist()):
+        X_train[c] = X_train[c].replace([np.inf, -np.inf], np.nan)
+        X_train[c].fillna(method="ffill", inplace=True)
+    print(np.any(np.isnan(X_train.values)))
+    print(np.isnan(X_train.values))
+    print(np.all(np.isfinite(X_train.values)))
+    for c in (X_test.columns.values.tolist()):
+        X_test[c] = X_test[c].replace([np.inf, -np.inf], np.nan)
+        X_test[c].fillna(X_test[c].mean(), inplace=True, axis=1)
+    print(np.any(np.isnan(X_test.values)))
+    print(np.all(np.isfinite(X_test.values)))
+
+
+    sys.exit()
     train.columns = ["acoustic_data", "time_to_failure"]
     #calc_test_features()
     #calc_train_features(train)

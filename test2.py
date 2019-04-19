@@ -3,11 +3,26 @@ import pandas as pd
 import os
 from obspy.signal.trigger import z_detect, classic_sta_lta
 import sys
+from sklearn.model_selection import KFold
 
 base_path = r"C:\datasets\earthquake"
 
-#train = pd.read_csv(os.path.join(base_path, "train/train.csv.010"), header=None)
-#train.columns= ["acoustic_data", "time_to_failure"]
+
+
+train = pd.read_csv(os.path.join(base_path, "train/train.csv.010"), header=None)
+train.columns= ["acoustic_data", "time_to_failure"]
+
+splitter = KFold(n_splits=5, random_state=2652124)
+
+splits = splitter.split(train["acoustic_data"], train["time_to_failure"])
+
+for (x, y) in splits:
+        print(x)
+        print(y)
+
+print(splits)
+
+sys.exit()
 
 #train.set_index("acoustic_data")
 x = pd.DataFrame(columns=["t"], data=[np.inf, -np.inf, np.NaN])
