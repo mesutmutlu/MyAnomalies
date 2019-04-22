@@ -10,6 +10,11 @@ def convert_int(x):
     except:
         return 0
 
+def weighted_rating(x, m=50, C=5):
+    v = x['vote_count']
+    R = x['vote_average']
+    # Compute the weighted score
+    return (v/(v+m) * R) + (m/(m+v) * C)
 
 def build_chart(gen_df, percentile=0.8):
     # Ask for preferred genres
@@ -42,18 +47,19 @@ def build_chart(gen_df, percentile=0.8):
                     (movies['year'] >= low_year) &
                     (movies['year'] <= high_year)]
 
+    print(movies.shape)
     # Compute the values of C and m for the filtered movies
     C = movies['vote_average'].mean()
     m = movies['vote_count'].quantile(percentile)
+    print(C, m)
 
     # Only consider movies that have higher than m votes. Save this in a new dataframe q_movies
 
     q_movies = movies.copy().loc[movies['vote_count'] >= m]
+    print(q_movies.shape)
 
     # Calculate score using the IMDB formula
-    q_movies['score'] = q_movies.apply(lambda x: (x['vote_count'] / (x['vote_count'] + m) * x['vote_average'])
-                                                 + (m / (m + x['vote_count']) * C)
-                                       , axis=1)
+    q_movies['score'] = q_movies.apply(lambda x:  weighted_rating(x, m, C), axis=1)
 
     # Sort movies in descending order of their scores
     q_movies = q_movies.sort_values('score', ascending=False)
@@ -95,8 +101,11 @@ if __name__ == "__main__":
     # Convert list of dictionaries to a list of strings
     df['genres'] = df['genres'].apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
 
+    print(df["year"].max())
     print(df.head())
 
+    df.to_csv('C:/datasets/hands-on-recommendation/metadata_clean.csv', index=False)
+    sys.exit()
     # Create a new feature by exploding genres
     s = df.apply(lambda x: pd.Series(x['genres']), axis=1).stack().reset_index(level=1, drop=True)
     print(s)
@@ -109,3 +118,5 @@ if __name__ == "__main__":
     #print("Print the head of the new gen_df")
     # Print the head of the new gen_df
     print(gen_df.head())
+
+    print(build_chart(gen_df).head())
