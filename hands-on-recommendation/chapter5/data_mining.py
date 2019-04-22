@@ -166,3 +166,26 @@ if __name__ == "__main__":
     # Display the scatterplot
     sns.lmplot(x='PC1', y='PC2', data=pca_iris, hue='class', fit_reg=False)
     plt.show()
+
+    # Divide the dataset into the feature dataframe and the target class series.
+    X, y = iris.drop('class', axis=1), iris['class']
+    # Split the data into training and test datasets.
+    # We will train on 75% of the data and assess our performance on 25% of the data
+
+    # Import the splitting function
+    from sklearn.model_selection import train_test_split
+
+    # Split the data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+
+    # Import the Gradient Boosting Classifier
+    from sklearn.ensemble import GradientBoostingClassifier
+
+    # Apply Gradient Boosting to the training data
+    gbc = GradientBoostingClassifier()
+    gbc.fit(X_train, y_train)
+    # Display a bar plot of feature importances
+    sns.barplot(x=['sepal_length', 'sepal_width', 'petal_length', 'petal_width'], y=gbc.feature_importances_)
+    plt.show()
+    # Compute the accuracy on the test set
+    print(gbc.score(X_test, y_test))
