@@ -12,5 +12,5 @@ if __name__ == "__main__":
     print(cred_df.head())
     key_df = pd.read_csv(r'C:\datasets\the-movies-dataset\keywords.csv')
     print(key_df.head())
-    lang_codes_df = pd.read_csv(r'C:\the-movies-dataset\language-codes-full.csv')
+    lang_codes_df = pd.read_csv(r'C:\datasets\the-movies-dataset\language-codes-full.csv')
     print(lang_codes_df.head())
