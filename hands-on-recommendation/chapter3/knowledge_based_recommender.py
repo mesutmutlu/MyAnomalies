@@ -105,7 +105,6 @@ if __name__ == "__main__":
     print(df.head())
 
     df.to_csv('C:/datasets/hands-on-recommendation/metadata_clean.csv', index=False)
-    sys.exit()
     # Create a new feature by exploding genres
     s = df.apply(lambda x: pd.Series(x['genres']), axis=1).stack().reset_index(level=1, drop=True)
     print(s)
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     # Create a new dataframe gen_df which by dropping the old 'genres' feature and adding the new 'genre'.
     gen_df = df.drop('genres', axis=1).join(s)
 
-    #print("Print the head of the new gen_df")
+    print("Print the head of the new gen_df")
     # Print the head of the new gen_df
     print(gen_df.head())
 
