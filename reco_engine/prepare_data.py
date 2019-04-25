@@ -2,9 +2,18 @@ import pandas as pd
 import numpy as np
 import sys
 from ast import literal_eval
+import datetime
 
 df_movies_fields_to_list = ['genres', 'production_companies', 'production_countries', 'spoken_languages']
-df_supp_fields_to_list = ['cast', 'crew', 'keywords']
+df_supp_fields_to_list = ['cast', 'keywords']
+keys = dict()
+keys["genres"] = "name"
+keys["production_companies"] = "name"
+keys["production_countries"] = "iso_3166_1"
+keys["spoken_languages"] = "iso_639_1"
+keys["cast"] = "name"
+keys["keywords"] = "name"
+keys["belongs_to_collection"] = "name"
 
 def read_files():
     movies_df = pd.read_csv(r'C:\datasets\the-movies-dataset\movies_metadata.csv', low_memory=False)
@@ -14,30 +23,20 @@ def read_files():
     return movies_df, cred_df, key_df
 
 def get_director(x):
+    #print(x)
     for crew_member in x:
         if crew_member['job'] == 'Director':
             return [crew_member['name']]
     return []
 
 def get_list(x, c, n):
-    keys = dict()
-    keys["genres"] = "name"
-    keys["production_companies"] = "name"
-    keys["production_countries"] = "iso_3166_1"
-    keys["spoken_languages"] = "iso_639_1"
-    keys["cast"] = "name"
-    keys["keywords"] = "name"
     if isinstance(x, list):
-        #print(x)
-        if c != "crew":
-            names = [ele[keys[c]] for ele in x]
-            #Check if more than 3 elements exist. If yes, return only first three.
-            #If no, return entire list.
-            if len(names) > n:
-                names = names[:n]
-            return names
-        else:
-            return get_director(x)
+        names = [ele[keys[c]] for ele in x]
+        #Check if more than 3 elements exist. If yes, return only first three.
+        #If no, return entire list.
+        if len(names) > n:
+            names = names[:n]
+        return names
     # Return empty list in case of missing/malformed data
     return []
 
@@ -50,7 +49,8 @@ def clean_ids(x):
 def sanitize(x):
     if isinstance(x, list):
         #Strip spaces and convert to lowercase
-        return [str.lower(i.replace(" ", "")) for i in x]
+        lst = [str.lower(i.replace(" ", "")) for i in x]
+        return ' '.join(lst)
     else:
         #Check if director exists. If not, return empty string
         if isinstance(x, str):
@@ -61,11 +61,34 @@ def sanitize(x):
 def get_leads(x, n):
     return x[:n]
 
+def get_collection(x):
+
+    if x != np.NaN:
+        try:
+            return [literal_eval(x)["name"]]
+        except:
+            return []
+    else:
+        return []
+
+def get_date(x, format, g):
+    try:
+        o_x = datetime.datetime.strptime(x, format)
+        if g == "year":
+            return int(o_x.year)
+        elif g == "month":
+            return int(o_x.month)
+        elif g == "day":
+            return int(o_x.day)
+        else:
+            return np.NaN
+    except:
+        return np.NaN
 
 def prepare_movies_data():
-    print()
-    movies_df, cred_df, key_df = read_files()
 
+    movies_df, cred_df, key_df = read_files()
+    print(movies_df)
     movies_df['id'] = movies_df['id'].apply(clean_ids)
     movies_df = movies_df[movies_df['id'].notnull()]
     key_df['id'] = key_df['id'].apply(clean_ids)
@@ -82,8 +105,15 @@ def prepare_movies_data():
 
     nan_columns = movies_df.columns[movies_df.isna().any()]
     #prepare movies_df
+
+    movies_df["release_year"] = movies_df["release_date"].apply(lambda x: get_date(x, "%Y-%m-%d", "year"))
+    movies_df["release_month"] = movies_df["release_date"].apply(lambda x: get_date(x, "%Y-%m-%d", "month"))
+    movies_df["release_day"] = movies_df["release_date"].apply(lambda x: get_date(x, "%Y-%m-%d", "day"))
     if 1==1:
 
+        movies_df["belongs_to_collection"] = movies_df["belongs_to_collection"].apply(
+            lambda x: get_collection(x))
+        movies_df["director"] = movies_df["crew"].apply(lambda x: get_director(literal_eval(x)))
         for c in df_movies_fields_to_list + df_supp_fields_to_list:
             if c in nan_columns:
                 movies_df[c].fillna("[]", inplace=True)
@@ -91,13 +121,16 @@ def prepare_movies_data():
             movies_df[c] = movies_df[c].apply(literal_eval)
             #convert objects to string
             movies_df[c] = movies_df[c].apply(lambda x: get_list(x, c, 10))
+
         movies_df["leads"] = movies_df["cast"].apply(lambda x: get_leads(x, 3))
-    for feature in df_movies_fields_to_list + df_supp_fields_to_list + ['leads']:
+
+
+    for feature in df_movies_fields_to_list + df_supp_fields_to_list + ['leads', 'director', 'belongs_to_collection']:
         movies_df[feature] = movies_df[feature].apply(sanitize)
 
-    drop_cols = ["budget", "original_title", "popularity", "poster_path","revenue", "video"]
+    drop_cols = ["budget", "original_title", "popularity", "poster_path","revenue", "video", "crew", "homepage"]
     movies_df.drop(drop_cols, inplace=True, axis=1)
-    #print(movies_df[45459:45465])
+    print(movies_df)
     return movies_df
 
 if __name__ == "__main__":
