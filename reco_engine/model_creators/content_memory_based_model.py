@@ -7,7 +7,7 @@ from reco_engine.prepare_data import prepare_movies_data
 from ast import literal_eval
 import datetime
 
-text_cos_sims = ["overview", "cast" , "keywords", "leads", "genres", "belongs_to_collection"]
+text_cos_sims = ["overview", "cast", "keywords", "leads", "genres", "belongs_to_collection"]
 def text_based_cos_sim(df, n):
     # Define a TF-IDF Vectorizer Object. Remove all english stopwords
     tfidf = TfidfVectorizer(stop_words='english')
