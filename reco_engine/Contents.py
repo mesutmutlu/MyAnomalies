@@ -6,9 +6,8 @@ class Content:
         pass
 
     def load_content_list(self):
-        movies = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_data.csv")
+        self.movielist = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_data.csv")
         #movies.sort_values(by="id", inplace=True)
-        self.movielist = movies[["id","title"]]
 
     def get_title_by_id(self, movie_id):
         self.load_content_list()
@@ -19,10 +18,12 @@ class Content:
         self.load_content_list()
         return self.movielist[self.movielist["title"] == movie_title]["id"].values[0]
 
+    def get_contents_by_id_list(self, lst_id):
+        self.load_content_list()
+        return self.movielist.set_index("id").loc[lst_id,]
 
 if __name__ == "__main__":
 
     Cnt = Content()
-    Cnt.load_content_list()
-    print(Cnt.movielist)
-    print(Cnt.movielist[Cnt.movielist["id"]==51945]["title"].values[0])
+    print(Cnt.get_contents_by_id_list([23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514]))
+    #23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514
