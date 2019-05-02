@@ -1,4 +1,5 @@
 import pandas as pd
+import sys
 class Content:
 
     def __init__(self):
@@ -23,7 +24,9 @@ class Content:
         return self.movielist.set_index("id").loc[lst_id,]
 
 if __name__ == "__main__":
-
+    sys.stdout.buffer.write(chr(9986).encode('utf8'))
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
     Cnt = Content()
     print(Cnt.get_contents_by_id_list([23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514]))
     #23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514

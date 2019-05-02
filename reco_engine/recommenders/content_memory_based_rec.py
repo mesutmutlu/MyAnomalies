@@ -98,13 +98,15 @@ class KNN_Recommender():
         # Define a TF-IDF Vectorizer Object. Remove all english stopwords
         tfidf = TfidfVectorizer(stop_words='english')
 
+
         # Replace NaN with an empty string
         df_cossim.fillna("", inplace=True)
         tfidf_matrix = tfidf.fit_transform(df_cossim)
-        knn = NearestNeighbors(metric='minkowski', algorithm='brute', n_neighbors=20).fit(tfidf_matrix[:10000]) #metric cosine
-        distances, indices = knn.kneighbors(tfidf_matrix[:10000])
-        #print(indices.shape)
-        #print(indices)
+        #print(tfidf_matrix)
+        knn = NearestNeighbors(metric='manhattan', algorithm='brute', n_neighbors=20).fit(tfidf_matrix[:n]) #metric cosine
+        distances, indices = knn.kneighbors(tfidf_matrix[:n])
+        print(indices)
+        print(distances)
         nn_movie_ids = np.empty(indices.shape)
         #print(nn_movie_ids.shape, "empty")
         i = 0
@@ -113,7 +115,7 @@ class KNN_Recommender():
             nn_movie_ids[i] = [movies_df.loc[ele, "id"] for ele in line]
             i += 1
         #print(movies_df["id"].values.shape, nn_movie_ids.shape, distances.shape)
-        data = np.concatenate((movies_df["id"][:10000].values.reshape(-1,1), nn_movie_ids, distances), axis=1)
+        data = np.concatenate((movies_df["id"][:n].values.reshape(-1,1), nn_movie_ids, distances), axis=1)
         self.set_model_key(feature_list)
         pd.DataFrame(data=data, columns=["id"]+["sid_"+str(i) for i in range(20)]+["dist_"+str(i) for i in range(20)]).to_csv(
             "C:/datasets/the-movies-dataset/models/content_based/content_" + self.model_key + "_knn.csv")
@@ -127,10 +129,12 @@ class KNN_Recommender():
         idx = Cnt.get_id_by_title(title)
         print("Finding similar movies based on ", idx, title, "using knn distance", model_key)
         knn_dist = self.get_model(model_key).set_index("id")
+        print(knn_dist)
         movie_sim = knn_dist.loc[idx, ["sid_"+str(i) for i in range(1,n+1)]].values.ravel().astype("int")
         movie_dist = knn_dist.loc[idx, ["dist_" + str(i) for i in range(1,n+1)]].values.reshape(-1, 1)
         Cnt.movielist.reset_index().set_index("id", inplace=True)
         # print(movie_sim.align(Cnt.movielist, join="left", axis=0))
+        print(movie_sim.tolist())
         df = Cnt.get_contents_by_id_list(movie_sim.tolist())
         df["similarity"] = movie_dist
         #print(df)
@@ -144,7 +148,7 @@ if __name__ == "__main__":
 
     CS_Rec = CosSim_Recommender()
     #CS_Rec.create_model(["leads", "genres"])
-    print(CS_Rec.make_recommendation("The Toy", ["leads", "genres"], 10))
+    #print(CS_Rec.make_recommendation("The Toy", ["leads", "genres"], 10))
     #print(text_cos_sim_recommender("The Toy", "overview")[["imdb_id", "title", "overview", "tagline", "genres"]])
 
     KNN = KNN_Recommender()
