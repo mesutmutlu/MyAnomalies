@@ -88,7 +88,7 @@ def get_date(x, format, g):
 def prepare_movies_metadata():
 
     movies_df, cred_df, key_df = read_movie_metadata_files()
-    print(movies_df)
+    #print(movies_df)
     movies_df['id'] = movies_df['id'].apply(clean_ids)
     movies_df = movies_df[movies_df['id'].notnull()]
     key_df['id'] = key_df['id'].apply(clean_ids)
@@ -130,23 +130,33 @@ def prepare_movies_metadata():
 
     drop_cols = ["budget", "original_title", "popularity", "poster_path","revenue", "video", "crew", "homepage"]
     movies_df.drop(drop_cols, inplace=True, axis=1)
-    print(movies_df)
-    return movies_df
+    #print(movies_df)
+    movieIds = pd.read_csv(r"C:\datasets\the-movies-dataset\movie_ids.csv")
+    return pd.merge(movies_df, movieIds[["id", "movieId"]], on=['id', 'id'], how='inner')[movies_df.columns.values.tolist()]
 
 def read_movie_ratings():
     ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\ratings.csv')
-    return ratings
+    movieIds = pd.read_csv(r"C:\datasets\the-movies-dataset\movie_ids.csv")
+    prep_data = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_data.csv")
+    movieIds = pd.merge(movieIds, prep_data, on=['id', 'id'], how='inner')
+    #print(ratings)
+    return pd.merge(ratings, movieIds, on=['movieId', 'movieId'], how='inner')[ratings.columns.values.tolist()+["id"]]
+    #return ratings
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+    #prepare_movies_metadata()
+    #print(read_movie_ratings())
+    #movies_df = prepare_movies_metadata()
 
-    print(read_movie_ratings())
-    #movies_df = prepare_movies_data()
-    #movies_df.to_csv("C:/datasets/the-movies-dataset/prep_data.csv", index=False)
+    prep_ratings = read_movie_ratings()
+    print(prep_ratings)
+    prep_ratings.to_csv("C:/datasets/the-movies-dataset/prep_ratings.csv", index=False)
+    #movies_df.to_csv("C:/datasets/the-movies-dataset/prep_movies_mdata.csv", index=False)
     #movies_df = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
-    #print(movies_df[movies_df["id"]==23805])
+    #print(movies_df = read_movie_ratings()[movies_df["id"]==23805])
     #23805
 
     #lang_codes_df = pd.read_csv(r'C:\datasets\the-movies-dataset\language-codes-full.csv')

@@ -157,6 +157,7 @@ if __name__ == "__main__":
     ratings = pd.read_csv(r'C:\datasets\ml-100k\u.data', sep='\t', names=r_cols,
                           encoding='latin-1')
 
+    print("ratings head")
     print(ratings.head())
 
     # Drop the timestamp column
