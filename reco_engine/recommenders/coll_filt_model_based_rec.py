@@ -10,7 +10,7 @@ class Base_Recommender():
         self.model_key = "None"
 
     def get_data(self):
-        ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\ratings_small.csv')
+        ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\prep_ratings.csv')
         return ratings
 
     def get_model(self, feature_list, model_type):
@@ -42,10 +42,9 @@ class CosSim_Recommender(Base_Recommender):
 
 
         if self.model_key == "movie":
-            Cnt = Content()
-            ele_lst = Cnt.get_content_ids_by_movieid(coll_matrix.index.tolist())["id"].values.tolist()
+            ele_lst = self.get_data()["id"].values.tolist()
         else:
-            ele_lst = coll_matrix.index.tolist()
+            ele_lst = self.get_data()["userId"].values.tolist()
 
         print(len(ele_lst))
         print(cosine_sim.shape)
