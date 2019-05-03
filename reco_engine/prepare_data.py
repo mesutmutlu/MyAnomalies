@@ -15,7 +15,7 @@ keys["cast"] = "name"
 keys["keywords"] = "name"
 keys["belongs_to_collection"] = "name"
 
-def read_files():
+def read_movie_metadata_files():
     movies_df = pd.read_csv(r'C:\datasets\the-movies-dataset\movies_metadata.csv', low_memory=False)
     cred_df = pd.read_csv(r'C:\datasets\the-movies-dataset\credits.csv')
     key_df = pd.read_csv(r'C:\datasets\the-movies-dataset\keywords.csv')
@@ -85,9 +85,9 @@ def get_date(x, format, g):
     except:
         return np.NaN
 
-def prepare_movies_data():
+def prepare_movies_metadata():
 
-    movies_df, cred_df, key_df = read_files()
+    movies_df, cred_df, key_df = read_movie_metadata_files()
     print(movies_df)
     movies_df['id'] = movies_df['id'].apply(clean_ids)
     movies_df = movies_df[movies_df['id'].notnull()]
@@ -133,16 +133,21 @@ def prepare_movies_data():
     print(movies_df)
     return movies_df
 
+def read_movie_ratings():
+    ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\ratings.csv')
+    return ratings
+
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
 
+    print(read_movie_ratings())
     #movies_df = prepare_movies_data()
     #movies_df.to_csv("C:/datasets/the-movies-dataset/prep_data.csv", index=False)
-    movies_df = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
-    print(movies_df[movies_df["id"]==23805])
+    #movies_df = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
+    #print(movies_df[movies_df["id"]==23805])
     #23805
 
-    lang_codes_df = pd.read_csv(r'C:\datasets\the-movies-dataset\language-codes-full.csv')
+    #lang_codes_df = pd.read_csv(r'C:\datasets\the-movies-dataset\language-codes-full.csv')
     #print(lang_codes_df.head())

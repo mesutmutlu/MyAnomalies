@@ -65,14 +65,11 @@ class CosSim_Recommender(Base_Recommender):
         Cnt.load_content_list()
         Cnt.movielist.set_index("title", inplace=True)
         idx = Cnt.get_id_by_title(title)
-        print("Finding similar movies based on ", idx, title, "using cos_sim", model_key)
-        cosine_sim = self.get_model(model_key, self.model_type).set_index("id")
-        #print(cosine_sim)
-        movie_sim = cosine_sim[str(idx)].sort_values(ascending=False)[1:n+1]
-        movie_sim.rename(columns={str(idx): 'similarity'}, axis=1, inplace=True)
-        #movie_sim["similarity"] = movie_sim[str(idx)]
+        print("Finding similar movies based on ", idx, title, "using", self.model_type, model_key)
+        sim_matrix = self.get_model(model_key, self.model_type)
+        movie_sim = sim_matrix[["id", str(idx)]].rename(columns={str(idx): 'similarity'}).set_index("id")
+        movie_sim = movie_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
         Cnt.movielist.reset_index().set_index("id", inplace=True)
-        # print(movie_sim.align(Cnt.movielist, join="left", axis=0))
         return pd.concat([Cnt.get_contents_by_id_list(movie_sim.index.values.tolist()), movie_sim], axis=1)
 
 class KNN_Recommender(Base_Recommender):
@@ -121,7 +118,7 @@ class KNN_Recommender(Base_Recommender):
         Cnt.load_content_list()
         Cnt.movielist.set_index("title", inplace=True)
         idx = Cnt.get_id_by_title(title)
-        print("Finding similar movies based on ", idx, title, "using knn distance", model_key)
+        print("Finding similar movies based on ", idx, title, "using", self.model_type, model_key)
         knn_dist = self.get_model(model_key, self.model_type).set_index("id")
         #print(knn_dist)
         movie_sim = knn_dist.loc[idx, ["sid_"+str(i) for i in range(1,n+1)]].values.ravel().astype("int")
@@ -154,7 +151,7 @@ class TSVD_Recommender(Base_Recommender):
         df_cossim.fillna("", inplace=True)
         tfidf_matrix = tfidf.fit_transform(df_cossim)
         #print(tfidf_matrix)
-        svd = TruncatedSVD(n_components=12, random_state=17) #metric cosine
+        svd = TruncatedSVD(n_components=12, random_state=17)
         svd_matrix = svd.fit_transform(tfidf_matrix[:n])
         #print(svd_matrix.shape)
         #print(svd_matrix)
@@ -170,13 +167,11 @@ class TSVD_Recommender(Base_Recommender):
         Cnt.load_content_list()
         Cnt.movielist.set_index("title", inplace=True)
         idx = Cnt.get_id_by_title(title)
-        print("Finding similar movies based on ", idx, title, "using tsvd", model_key)
-        cosine_sim = self.get_model(model_key, self.model_type).set_index("id")
-        movie_sim = cosine_sim[str(idx)].sort_values(ascending=False)[1:n + 1]
-        movie_sim.rename(columns={str(idx): 'similarity'}, axis=1, inplace=True)
-        # movie_sim["similarity"] = movie_sim[str(idx)]
+        print("Finding similar movies based on ", idx, title, "using", self.model_type, model_key)
+        sim_matrix = self.get_model(model_key, self.model_type)
+        movie_sim = sim_matrix[["id",str(idx)]].rename(columns={str(idx): 'similarity'}).set_index("id")
+        movie_sim = movie_sim.sort_values(by=["similarity"],ascending=False)[1:n + 1]
         Cnt.movielist.reset_index().set_index("id", inplace=True)
-        # print(movie_sim.align(Cnt.movielist, join="left", axis=0))
         return pd.concat([Cnt.get_contents_by_id_list(movie_sim.index.values.tolist()), movie_sim], axis=1)
 
 if __name__ == "__main__":
@@ -191,9 +186,9 @@ if __name__ == "__main__":
     #print(text_cos_sim_recommender("The Toy", "overview")[["imdb_id", "title", "overview", "tagline", "genres"]])
 
     KNN = KNN_Recommender()
-    KNN.create_model(["leads", "genres"])
-    print(KNN.make_recommendation("The Toy", ["leads", "genres"], 10))
+    #KNN.create_model(["leads", "genres"])
+    #print(KNN.make_recommendation("The Toy", ["leads", "genres"], 10))
 
     SVD = TSVD_Recommender()
-    SVD.create_model(["leads", "genres"])
+    #SVD.create_model(["leads", "genres"])
     print(SVD.make_recommendation("The Toy", ["leads", "genres"], 10))
