@@ -135,13 +135,28 @@ def prepare_movies_metadata():
     return pd.merge(movies_df, movieIds[["id", "movieId"]], on=['id', 'id'], how='inner')[movies_df.columns.values.tolist()]
 
 def read_movie_ratings():
-    ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\ratings.csv')
+
     movieIds = pd.read_csv(r"C:\datasets\the-movies-dataset\movie_ids.csv")
-    prep_data = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_data.csv")
-    movieIds = pd.merge(movieIds, prep_data, on=['id', 'id'], how='inner')
+    prep_data = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_data.csv")[["id"]]
+    df = pd.merge(movieIds, prep_data, on=['id', 'id'], how='inner')
+    prep_data = None
+    ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\ratings.csv')
+
     #print(ratings)
-    return pd.merge(ratings, movieIds, on=['movieId', 'movieId'], how='inner')[ratings.columns.values.tolist()+["id"]]
-    #return ratings
+    #df = pd.merge(ratings, df, on=['movieId', 'movieId'], how='inner')[ratings.columns.values.tolist()+["id"]]
+    df = ratings[ratings.movieId.isin(df.movieId.unique())]
+    ratings = None
+    print(df)
+    users = pd.read_csv(r"C:\datasets\the-movies-dataset\users.csv")
+    print(users)
+    #df = pd.merge(df, users, on=['userId', 'userid'], how='inner')
+    df = df[df.userId.isin(users.userid.unique())]
+    users = None
+    df = pd.merge(df, movieIds, on=['movieId', 'movieId'], how='inner')[df.columns.values.tolist()+["id"]]
+    print(df)
+    df["id"] = df["id"].astype(int)
+    df["id"] = df["id"].astype(str)
+    return df
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
@@ -151,8 +166,11 @@ if __name__ == "__main__":
     #print(read_movie_ratings())
     #movies_df = prepare_movies_metadata()
 
-    prep_ratings = read_movie_ratings()
+    #prep_ratings = read_movie_ratings()
+    prep_ratings = pd.read_csv("C:/datasets/the-movies-dataset/prep_ratings.csv")
     print(prep_ratings)
+    prep_ratings["id"] = prep_ratings["id"].astype(int)
+    prep_ratings["id"] = prep_ratings["id"].astype(int).astype(str)
     prep_ratings.to_csv("C:/datasets/the-movies-dataset/prep_ratings.csv", index=False)
     #movies_df.to_csv("C:/datasets/the-movies-dataset/prep_movies_mdata.csv", index=False)
     #movies_df = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")

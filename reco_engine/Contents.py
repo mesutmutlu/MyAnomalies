@@ -38,6 +38,7 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     Cnt = Content()
+    print(Cnt.get_id_by_title("Hideaway"))
     Cnt.load_content_list()
     print(Cnt.get_contents_by_id_list([23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514]))
     #23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514
