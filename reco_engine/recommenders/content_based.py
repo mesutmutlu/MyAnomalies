@@ -181,10 +181,10 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
 
     CS_Rec = CosSim_Recommender()
-    #CS_Rec.create_model(["overview"])
-    print(CS_Rec.make_recommendation("The Toy", ["leads", "genres"], 10))
+    CS_Rec.create_model(["overview"])
+    #print(CS_Rec.make_recommendation("The Toy", ["leads", "genres"], 10))
     #print(text_cos_sim_recommender("The Toy", "overview")[["imdb_id", "title", "overview", "tagline", "genres"]])
-
+    sys.exit()
     KNN = KNN_Recommender()
     #KNN.create_model(["leads", "genres"])
     #print(KNN.make_recommendation("The Toy", ["leads", "genres"], 10))
