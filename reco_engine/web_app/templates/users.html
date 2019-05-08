@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Users</title>
+</head>
+<body>
+    <h3>Users</h3>
+        <ul id="users">
+            {% for user in users%}
+                <li><a href="http://127.0.0.1:5003/user/{{ user['userid'] }}">{{ user['username'] }}</a> </li>
+            {% endfor %}
+        </ul>
+</body>
+</html>

@@ -15,6 +15,10 @@ class Content:
         self.load_content_list()
         return self.movielist[self.movielist["id"] == movie_id]["title"].values[0]
 
+    def get_content_by_id(self, movie_id):
+        self.load_content_list()
+        return self.movielist[self.movielist["id"] == movie_id]
+
     def get_id_by_title(self, movie_title):
         self.load_content_list()
         return self.movielist[self.movielist["title"] == movie_title]["id"].values[0]

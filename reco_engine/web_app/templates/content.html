@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Content - {{ content['title'] }}</title>
+</head>
+<body>
+    <h3>{{ content['title'] }}</h3>
+    <table>
+        {% for key, value in content.items() %}
+        <tr>
+            <td><b>{{ key }}</b></td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+<div>
+
+    <h4>10 Overview Based Recomendation</h4>
+        {% print(descsimcontents) %}
+        <ul>
+            {% for content in descsimcontents %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a> - {{ content['similarity'] }} </li>
+            {% endfor %}
+        </ul>
+
+    <h4>10 Recomendation Based on Genre Similarity</h4>
+        <ul>
+            {% for content in genresimcontents %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+            {% endfor %}
+        </ul>
+
+    <h4>10 Recomendation Based on Cast Similarity</h4>
+        <ul>
+            {% for content in castsimcontents %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+            {% endfor %}
+        </ul>
+
+    <h4>10 Recomendation Based on user watch history similarity</h4>
+        <ul>
+            {% for content in usersimcontents %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+            {% endfor %}
+        </ul>
+</div>
+
+</body>
+</html>

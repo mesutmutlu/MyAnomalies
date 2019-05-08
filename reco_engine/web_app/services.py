@@ -1,57 +1,65 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_restful import Resource, Api
 from sqlalchemy import create_engine
 from json import dumps
 from reco_engine.Users import User
 from reco_engine.Contents import Content
 import pandas as pd
-
+import json
+import sys
 #db_connect = create_engine('sqlite:///chinook.db')
 app = Flask(__name__)
 api = Api(app)
 
 
-class Users(Resource):
-    def get(self):
-        Usr = User()
-        Usr.load_user_list()
-        return jsonify(Usr.users)
+@app.route('/getuserlist')
+def getuserlist():
+    Usr = User()
+    Usr.load_user_list()
+    #print(Usr.users.to_json(orient='records'))
+    return Usr.users.to_json(orient='records')
 
-class Contents(Resource):
-    def get(self):
-        Cnt = Content()
-        Cnt.load_content_list()
-        return jsonify(Cnt.movielist)
+@app.route('/getcontentlist')
+def get():
+    Cnt = Content()
+    Cnt.load_content_list()
+    return Cnt.movielist.to_json(orient="records")
 
+def loadratings():
+    ratings = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_ratings.csv")
+    #print(ratings)
+    Cnt = Content()
+    Cnt.load_content_list()
+    Usr = User()
+    Usr.load_user_list()
+    #print(Usr.users)
+    ratings = ratings.merge(Usr.users, left_on ="userId", right_on= "userid", how="inner")
+    ratings = ratings.merge(Cnt.movielist, on=["id"], how="inner")[["userId", "username", "id", "title", "rating"]]
+    return ratings
 
-class Ratings(Resource):
+@app.route('/getratings')
+def getratings():
+    return loadratings().to_json(orient="records")
 
-    def __loadratings(self):
-        ratings = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_ratings")
-        Cnt = Content()
-        Cnt.load_content_list()
-        Usr = User()
-        Usr.load_user_list()
-        ratings = ratings.merge(Usr.users, on=["userId", "userid"], how="inner")
-        ratings = ratings.merge(Cnt.movielist, on=["id"], how="inner")
-        return ratings
+@app.route('/getuserratings/<username>/')
+def getuserratings(username):
+    ratings = loadratings()
+    return ratings[ratings["username"]==username][["id", "title", "rating"]].to_json(orient="records")
 
-    def getall(self):
-        return jsonify(self.__loadratings())
+@app.route('/gettitleratings/<title>/')
+def gettitleratings(title):
+    ratings = loadratings()
+    return ratings[ratings["title"]==title][["userId", "username", "rating"]].to_json(orient="records")
 
-    def get_by_username(self, username):
-        ratings = self.__loadratings()
-        return jsonify(ratings[ratings["username"]==username])
-
-    def get_by_title(self, title):
-        ratings = self.__loadratings()
-        return jsonify(ratings[ratings["title"]==title])
-
-
-
-api.add_resource(Users, '/users')  # Route_1
-api.add_resource(Contents, '/contents')  # Route_2
-api.add_resource(Ratings, '/ratings/<employee_id>')  # Route_3
+@app.route('/users')
+def view_users():
+    Usr = User()
+    Usr.load_user_list()
+    render_template()
 
 if __name__ == '__main__':
     app.run(port='5002')
+    sys.stdout.buffer.write(chr(9986).encode('utf8'))
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
+    print(loadratings())

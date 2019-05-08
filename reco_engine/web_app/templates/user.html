@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h3>{{ user['userid'] }} - {{ user['username'] }}</h3>
+<div>
+
+    <h4>10 Recomendation Based on Similar Users (rating based)</h4>
+        <ul>
+            {% for content in simusers %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+        </ul>
+
+    <h4>10 Recomendation Based on most watched cast (3 leads)</h4>
+        <ul>
+            {% for content in simcast %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+        </ul>
+
+    <h4>10 Recomendation Based on most watched genres</h4>
+        <ul>
+            {% for content in simcast %}
+            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+        </ul>
+</div>
+
+</body>
+</html>

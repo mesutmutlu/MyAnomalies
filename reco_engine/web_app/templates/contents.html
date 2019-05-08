@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contents</title>
+</head>
+<body>
+    <h3>Contents</h3>
+        <ul id="contents">
+            {% for content in contents%}
+                <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> </li>
+            {% endfor %}
+        </ul>
+</body>
+</html>
