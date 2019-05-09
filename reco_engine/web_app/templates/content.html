@@ -14,37 +14,80 @@
         </tr>
         {% endfor %}
     </table>
-<div>
+    <div style="float:left">
 
-    <h4>10 Overview Based Recomendation</h4>
-        {% print(descsimcontents) %}
-        <ul>
-            {% for content in descsimcontents %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a> - {{ content['similarity'] }} </li>
+        <h4>Cosine Overview TFIDF</h4>
+            <table>
+                <tr>
+                    <td><b>Title</b></td>
+                    <td><b>Similarity</b></td>
+                </tr>
+                {% for content in descsimcontents %}
+                <tr>
+                    <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['similarity'] }} </td>
+                </tr>
+                {% endfor %}
+            </table>
+    </div>
+    <div style="float:left">
+
+    <h4>Cosine Genre TFIDF</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Similarity</b></td>
+            </tr>
+            {% for content in genressimcontents %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['similarity'] }} </td>
+            </tr>
             {% endfor %}
-        </ul>
+        </table>
+    </div>
+    <div style="float:left">
 
-    <h4>10 Recomendation Based on Genre Similarity</h4>
-        <ul>
-            {% for content in genresimcontents %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
-            {% endfor %}
-        </ul>
-
-    <h4>10 Recomendation Based on Cast Similarity</h4>
-        <ul>
+    <h4>Cosine Cast TFIDF</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Similarity</b></td>
+            </tr>
             {% for content in castsimcontents %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['similarity'] }} </td>
+            </tr>
             {% endfor %}
-        </ul>
+        </table>
+    </div>
+     <div style="float:left">
 
-    <h4>10 Recomendation Based on user watch history similarity</h4>
-        <ul>
-            {% for content in usersimcontents %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
+    <h4>Cosine Keywords TFIDF</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Similarity</b></td>
+            </tr>
+            {% for content in keywordsimcontents %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['similarity'] }} </td>
+            </tr>
             {% endfor %}
-        </ul>
-</div>
+        </table>
+    </div>
+    <div style="float:clear">
+    <h4>Cosine User Ratings</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Similarity</b></td>
+            </tr>
+            {% for content in watchhistsimcontents %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['similarity'] }} </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
 </body>
 </html>

@@ -132,7 +132,15 @@ def prepare_movies_metadata():
     movies_df.drop(drop_cols, inplace=True, axis=1)
     #print(movies_df)
     movieIds = pd.read_csv(r"C:\datasets\the-movies-dataset\movie_ids.csv")
-    return pd.merge(movies_df, movieIds[["id", "movieId"]], on=['id', 'id'], how='inner')[movies_df.columns.values.tolist()]
+    ratings = pd.read_csv(r"C:\datasets\the-movies-dataset\ratings.csv")
+    movies_df = pd.merge(movies_df, movieIds[["id", "movieId"]], on=['id', 'id'], how='inner')[movies_df.columns.values.tolist() + ["movieId"]]
+    print(movies_df.shape)
+    rating_movies = pd.DataFrame(data=ratings["movieId"].unique(), columns=["movieId"])
+    print(len(rating_movies))
+    df_f = pd.merge(movies_df, rating_movies, on=['movieId', 'movieId'], how='inner')[movies_df.columns.values.tolist()].drop("movieId", axis=1)
+    df_f = df_f.drop_duplicates(subset='id', keep='first')
+    print(df_f.shape)
+    return df_f
 
 def read_movie_ratings():
 
@@ -164,8 +172,12 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
     #prepare_movies_metadata()
     #print(read_movie_ratings())
-    #movies_df = prepare_movies_metadata()
-
+    #movies_df, cred_df, key_df = read_movie_metadata_files()
+    #print(movies_df)
+    #sys.exit()
+    movies_df = prepare_movies_metadata()
+    movies_df.to_csv("C:/datasets/the-movies-dataset/prep_data.csv", index=False)
+    sys.exit()
     #prep_ratings = read_movie_ratings()
     prep_ratings = pd.read_csv("C:/datasets/the-movies-dataset/prep_ratings.csv")
     print(prep_ratings)

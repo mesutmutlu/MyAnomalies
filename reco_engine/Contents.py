@@ -25,6 +25,8 @@ class Content:
 
     def get_contents_by_id_list(self, lst_id):
         self.load_content_list()
+        #print(self.movielist[["id","title"]].loc[lst_id,])
+        #print(self.movielist[["id","title"]].loc[lst_id,])
         return self.movielist.set_index("id").loc[lst_id,]
 
     def get_content_ids_by_movieid(self, lst_id):
@@ -44,5 +46,5 @@ if __name__ == "__main__":
     Cnt = Content()
     print(Cnt.get_id_by_title("Hideaway"))
     Cnt.load_content_list()
-    print(Cnt.get_contents_by_id_list([23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514]))
+    print(Cnt.get_contents_by_id_list([24684, 198062, 102304,  27437,  14845 , 25095  ,14205  ,49022 ,120292 , 18041]))
     #23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514

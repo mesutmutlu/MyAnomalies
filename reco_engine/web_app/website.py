@@ -21,6 +21,10 @@ def view_users():
     print(users)
     return render_template("users.html", users=users)
 
+@app.route('/')
+def index():
+    return render_template("index.html")
+
 @app.route('/contents')
 def view_contents():
     Cnt = Content()
@@ -37,10 +41,17 @@ def get_content(id):
     content = json.loads(c.to_json(orient='records'))[0]
     #print(content)
     CSR = CosSim_Recommender()
-    d_rec = CSR.make_recommendation(content["title"], "overview", 10).reset_index()
-    d_rec = json.loads(d_rec.to_json(orient='records'))
-    print(d_rec)
-    return render_template("content.html", content=content, descsimcontents=d_rec)
+    descsimcontents = CSR.make_recommendation(content["title"], "overview", 10).reset_index()
+    descsimcontents = json.loads(descsimcontents.to_json(orient='records'))
+    genressimcontents = CSR.make_recommendation(content["title"], ["leads","genres"], 10).reset_index()
+    genressimcontents = json.loads(genressimcontents.to_json(orient='records'))
+    castsimcontents = CSR.make_recommendation(content["title"], "cast", 10).reset_index()
+    castsimcontents = json.loads(castsimcontents.to_json(orient='records'))
+    keywordsimcontents = CSR.make_recommendation(content["title"], "keywords", 10).reset_index()
+    keywordsimcontents = json.loads(keywordsimcontents.to_json(orient='records'))
+
+    return render_template("content.html", content=content, descsimcontents=descsimcontents, genressimcontents=genressimcontents,
+                           castsimcontents=castsimcontents, keywordsimcontents=keywordsimcontents)
 
 if __name__ == '__main__':
     app.run(port='5003')
