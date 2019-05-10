@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify, render_template
 from flask_restful import Resource, Api
 from sqlalchemy import create_engine
 from json import dumps
-from reco_engine.Users import User
-from reco_engine.Contents import Content
+from reco_engine.Lib_User import User
+from reco_engine.Lib_Content import Content
 import pandas as pd
 import json
 import sys

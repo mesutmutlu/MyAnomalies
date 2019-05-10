@@ -2,8 +2,8 @@ import pandas as pd
 from reco_engine.prepare_data import read_movie_ratings
 import sys
 from sklearn.metrics.pairwise import cosine_similarity
-from reco_engine.Contents import Content
-from reco_engine.Users import User
+from reco_engine.Lib_Content import Content, Content_Helper
+from reco_engine.Lib_User import User
 import numpy as np
 
 class Base_Recommender():
@@ -33,65 +33,41 @@ class CosSim_Recommender(Base_Recommender):
     def create_model(self):
         n=61000
         raw_data = self.get_data()[:n].fillna(0)
-        #print(raw_data.head())
-        #print(raw_data.shape)
-        #print(raw_data[raw_data["id"]<0])
-        #print(raw_data[raw_data["userId"] < 0])
-        #print(len(raw_data.userId.unique()), len(raw_data.id.unique()))
-
         coll_matrix=raw_data.pivot_table(values='rating', index=self.pv_index, columns=self.pv_columns).fillna(0)
-        # print(tfidf_matrix.shape, cosine_sim.shape)
-        # print(cosine_sim.shape)
-        #print(coll_matrix.shape)
-        #print(coll_matrix)
         cosine_sim = cosine_similarity(coll_matrix, coll_matrix)
-        #print("cosine shape", cosine_sim.shape)
-        #print(cosine_sim)
 
         ele_lst = [str(int(x)) for x in  raw_data[self.pv_index ].unique()]
-
-        #print("ele_slt", len(ele_lst))
-        #print(ele_lst)
-
         pd.DataFrame(data=cosine_sim, index=ele_lst, columns=ele_lst).to_csv(
             "C:/datasets/the-movies-dataset/models/collaborative_based/coll_" + self.model_key + ".csv")
 
-    def make_recommendation_by_movie(self,title, n):
+    def make_recommendation_by_movie(self, idx, n):
         # Obtain the id of the movie that matches the title
-        Cnt = Content()
-        Cnt.load_content_list()
-        Cnt.movielist.set_index("title", inplace=True)
-        #print(Cnt.movielist)
-        idx = Cnt.get_id_by_title(title)
-        print("Finding similar movies based on ", idx, title, "using", self.model_key)
+        Cnt = Content(idx)
+        print("Finding similar movies based on ", idx, Cnt.content["title"], "using", self.model_key)
         movie_sim = self.get_model()[[str(idx)]].rename(columns={str(idx): 'similarity'})
         movie_sim = movie_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
-        Cnt.movielist.reset_index().set_index("id", inplace=True)
-        return pd.concat([Cnt.get_contents_by_id_list(movie_sim.index.values.tolist()), movie_sim], axis=1)
+        return pd.concat([Content_Helper.get_contents_by_id_list(movie_sim.index.values.tolist())[["title"]], movie_sim], axis=1)[:n]
 
-    def make_recommendation_by_user(self,user_name, n):
+    def make_recommendation_by_user(self, idx, n):
         # Obtain the id of the movie that matches the title
-        Usr = User()
-        idx = Usr.get_userid_by_name(user_name)
-        print("Finding similar movies for ", idx, user_name, "using", self.model_key)
+        Usr = User(idx)
+        print("Finding similar movies for ", idx, Usr.user["username"], "using", self.model_key)
         user_sim = self.get_model()[[str(idx)]].rename(columns={str(idx): 'similarity'})
         user_sim = user_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
-        Usr.users.reset_index().set_index("userid", inplace=True)
-        print("similar_users")
-        print(pd.concat([Usr.get_users_by_id_list(user_sim.index.values.tolist()), user_sim], axis=1))
+        #print("similar_users")
+        #print(pd.concat([Usr.get_users_by_id_list(user_sim.index.values.tolist()), user_sim], axis=1))
         ratings = self.get_data().pivot_table(values="rating", columns=self.pv_index, index=self.pv_columns).fillna(0)[user_sim.index.values.tolist()]
-        print(ratings.loc[862,user_sim.index.values.tolist()])
+        #print(ratings.loc[862,user_sim.index.values.tolist()])
         #print(ratings)
         predicted_ratings = pd.DataFrame(data= np.dot(ratings, user_sim), index = ratings.index.values.tolist(), columns=["pre_rating"])
         predicted_ratings.index.name = "id"
-        print(predicted_ratings)
-        Cnt = Content()
-        Cnt.load_content_list()
-        print(Cnt.movielist.set_index("id"))
-        predicted_ratings= predicted_ratings.join(Cnt.movielist.set_index("id")["title"], how="left")
-        print(predicted_ratings.sort_values(by=["pre_rating"], ascending=False))
-        print(self.get_data()[self.get_data()["userId"]==11].sort_values(by=["rating"], ascending=False))
-        return predicted_ratings.sort_values(by=["pre_rating"], ascending=False)
+        predicted_ratings.drop(labels=Usr.get_rating_history().index,inplace=True, axis=0)
+        #print(predicted_ratings)
+        #print(Cnt.movielist.set_index("id"))
+        predicted_ratings= predicted_ratings.join(Content_Helper.get_content_list()["title"], how="left")
+        #print(predicted_ratings.sort_values(by=["pre_rating"], ascending=False))
+        #print(self.get_data()[self.get_data()["userId"]==11].sort_values(by=["rating"], ascending=False))
+        return predicted_ratings.sort_values(by=["pre_rating"], ascending=False)[:n].reset_index()
 
 
 
@@ -100,8 +76,11 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     #ratings = read_movie_ratings()
-    CS_Rec = CosSim_Recommender("movie")
+    #CS_Rec = CosSim_Recommender("movie")
+    #CS_Rec.create_model()
+    CS_Rec = CosSim_Recommender("user")
     #CS_Rec.create_model()
     #print(CS_Rec.get_model().shape)
     #print(CS_Rec.get_model())
-    print(CS_Rec.make_recommendation_by_movie("The Toy", 10))
+    print(CS_Rec.make_recommendation_by_user(22, 10))
+

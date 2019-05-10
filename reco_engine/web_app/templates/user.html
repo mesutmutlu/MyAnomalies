@@ -5,27 +5,48 @@
     <title>Title</title>
 </head>
 <body>
-    <h3>{{ user['userid'] }} - {{ user['username'] }}</h3>
-<div>
-
-    <h4>10 Recomendation Based on Similar Users (rating based)</h4>
-        <ul>
-            {% for content in simusers %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
-        </ul>
-
-    <h4>10 Recomendation Based on most watched cast (3 leads)</h4>
-        <ul>
-            {% for content in simcast %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
-        </ul>
-
-    <h4>10 Recomendation Based on most watched genres</h4>
-        <ul>
-            {% for content in simcast %}
-            <li><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title'] }}</a> - {{ content['similarity'] }} </li>
-        </ul>
-</div>
-
+    <ul>
+        <li style="display:inline"><a href="/">Main</a></li>
+        <li style="display: inline"><a href="/users">Users</a></li>
+        <li style="display: inline"><a href="/contents">Contents</a></li>
+        <!--li style="display: inline"><a href="/ratings">Ratings</a></li-->
+    </ul>
+    <h3>{{ user['username'] }}</h3>
+    <table>
+        {% for key, value in user.items() %}
+        <tr>
+            <td><b>{{ key }}</b></td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div style="float:left">
+        <h4>User Watch History</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Rating</b></td>
+            </tr>
+            {% for content in ratings %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ ratings['id'] }}">{{ content['title']}}</a></td> <td>{{ content['rating'] }} </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div style="float:left">
+        <h4>Predicted weighted ratings based on User Cosine</h4>
+        <table>
+            <tr>
+                <td><b>Title</b></td>
+                <td><b>Predicted Rating</b></td>
+            </tr>
+            {% for content in pre_ratings %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/content/{{ ratings['id'] }}">{{ content['title']}}</a></td> <td>{{ content['pre_rating'] }} </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 </body>
 </html>

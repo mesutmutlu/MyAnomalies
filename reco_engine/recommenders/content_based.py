@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from reco_engine.Contents import Content
+from reco_engine.Lib_Content import Content, Content_Helper
 import sys
 import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
@@ -16,19 +16,20 @@ from nltk.stem import  WordNetLemmatizer
 
 class Base_Recommender():
 
-    def __init__(self):
-        self.all_features = ["overview", "cast", "keywords", "leads", "genres", "belongs_to_collection"]
-        self.model_key = "_".join(self.all_features)
+    def __init__(self, features):
+        #self.all_features = ["overview", "cast", "keywords", "leads", "genres", "belongs_to_collection"]
+        self.set_model_key(features)
+        self.model_type = ""
 
     def get_data(self):
-        self.raw_data = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
+        #self.raw_data = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
         return pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
 
-    def get_model(self, feature_list, model_type):
-        self.set_model_key(feature_list)
+    def get_model(self):
+        #self.set_model_key(feature_list)
+        #print("model:","C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+self.model_type+".csv")
         return pd.read_csv(
-            r"C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+model_type+".csv")
-
+            r"C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+self.model_type+".csv")
 
     def set_model_key(self, feature_list):
         if len(feature_list) == 1:
@@ -38,11 +39,11 @@ class Base_Recommender():
         else:
             self.model_key = "_".join(feature_list)
 
-class CosSim_Recommender(Base_Recommender):
+class Cosine_Recommender(Base_Recommender):
 
-    def __init__(self):
-        Base_Recommender.__init__(self)
-        self.model_type = "cossim"
+    def __init__(self, features):
+        Base_Recommender.__init__(self, features)
+        self.model_type = "cosine"
 
     def tokenize(self, text):
         tokens = nltk.word_tokenize(text)
@@ -51,27 +52,30 @@ class CosSim_Recommender(Base_Recommender):
             stems.append(WordNetLemmatizer().lemmatize(item))
         return stems
 
-    def create_model(self, feature_list, type):
+    def create_model(self, feature_list, f_type):
         n = 100000
         num = 20
         movies_df = self.get_data()
-        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ''.join(x), axis=1)
+        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ' '.join(x), axis=1)
         #print(movies_df)
         #movies_df['to_cossim'] = movies_df[['Year', 'quarter']].apply(lambda x: ''.join(x), axis=1)
         # Define a TF-IDF Vectorizer Object. Remove all english stopwords
-        if type == "category":
-            tfidf = TfidfVectorizer(stop_words=stopwords.words("english"), analyzer="word")
-        elif type == "text":
+        if f_type == "category":
+            tfidf = TfidfVectorizer(analyzer="word")
+        elif f_type == "text":
             tfidf = TfidfVectorizer(stop_words=stopwords.words("english"), analyzer="word", tokenizer=self.tokenize)
         else:
             tfidf = TfidfVectorizer(stop_words=stopwords.words("english"), analyzer="word")
 
         # Replace NaN with an empty string
         df_cossim.fillna("", inplace=True)
+        #print(df_cossim)
         tfidf_matrix = tfidf.fit_transform(df_cossim[:n])
+        #print(tfidf_matrix)
+        #print(tfidf.vocabulary_)
         cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
         #print(tfidf_matrix.shape, cosine_sim.shape)
-        #print(cosine_sim.shape)
+        #print(cosine_sim)
         self.set_model_key(feature_list)
         df_cosine_sim = pd.DataFrame(data=cosine_sim, index=movies_df.id[:n], columns=movies_df.id[:n])
 
@@ -98,24 +102,15 @@ class CosSim_Recommender(Base_Recommender):
         df_similars.to_csv(
             "C:/datasets/the-movies-dataset/models/content_based/content_" + self.model_key + "_" + self.model_type + ".csv", index=False)
 
-    def make_recommendation(self, title, model_key, n):
-        Cnt = Content()
-        Cnt.load_content_list()
-        Cnt.movielist.set_index("title", inplace=True)
-        idx = Cnt.get_id_by_title(title)
-        print("Finding similar movies based on ", idx, title, "using", self.model_type, model_key)
-        knn_dist = self.get_model(model_key, self.model_type).set_index("id")
-        # print(knn_dist)
-        movie_sim = knn_dist.loc[idx, ["sid_" + str(i) for i in range(1, n + 1)]].values.ravel().astype("int")
-        movie_dist = knn_dist.loc[idx, ["sim_" + str(i) for i in range(1, n + 1)]].values.reshape(-1, 1)
-        Cnt.movielist.reset_index().set_index("id", inplace=True)
-        # print(movie_sim.align(Cnt.movielist, join="left", axis=0))
-        # print(movie_sim.tolist())
-        print(movie_sim)
-        df = Cnt.get_contents_by_id_list(movie_sim.tolist())
+    def make_recommendation(self, idx, n):
+        Cnt = Content(idx)
+        print("Finding similar movies based on ", idx, Cnt.content["title"], "using", self.model_type, self.model_key)
+        sim_movies = self.get_model().set_index("id").reindex([idx])
+        movie_sim = sim_movies.loc[idx, ["sid_" + str(i) for i in range(1, n + 1)]].values.ravel().astype("int")
+        movie_dist = sim_movies.loc[idx, ["sim_" + str(i) for i in range(1, n + 1)]].values.reshape(-1, 1)
+        df = Content_Helper.get_contents_by_id_list(movie_sim.tolist())
         df["similarity"] = movie_dist
-        # print(df)
-        return df
+        return df[["title","similarity"]]
 
 class KNN_Recommender(Base_Recommender):
 
@@ -126,7 +121,7 @@ class KNN_Recommender(Base_Recommender):
     def create_model(self, feature_list):
         n = 10000
         movies_df = self.get_data()
-        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ''.join(x), axis=1)
+        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ' '.join(x), axis=1)
         #print(movies_df)
         #movies_df['to_cossim'] = movies_df[['Year', 'quarter']].apply(lambda x: ''.join(x), axis=1)
         # Define a TF-IDF Vectorizer Object. Remove all english stopwords
@@ -170,7 +165,7 @@ class KNN_Recommender(Base_Recommender):
         movie_dist = knn_dist.loc[idx, ["dist_" + str(i) for i in range(1,n+1)]].values.reshape(-1, 1)
         Cnt.movielist.reset_index().set_index("id", inplace=True)
         # print(movie_sim.align(Cnt.movielist, join="left", axis=0))
-        #print(movie_sim.tolist())
+        print(movie_sim.tolist())
         df = Cnt.get_contents_by_id_list(movie_sim.tolist())
         df["similarity"] = movie_dist
         #print(df)
@@ -186,7 +181,7 @@ class TSVD_Recommender(Base_Recommender):
         n = 10000
         movies_df = self.get_data()
         #print(movies_df)
-        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ''.join(x), axis=1)
+        df_cossim = movies_df[feature_list].fillna("").apply(lambda x: ' '.join(x), axis=1)
         #print(movies_df)
         #movies_df['to_cossim'] = movies_df[['Year', 'quarter']].apply(lambda x: ''.join(x), axis=1)
         # Define a TF-IDF Vectorizer Object. Remove all english stopwords
@@ -224,11 +219,26 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+
+    # movies_df = pd.read_csv("C:/datasets/the-movies-dataset/prep_data.csv")
+    # df = pd.DataFrame(columns=["leads", "genres"], data=[["1 2","2"], ["a","b c"]])
+    # print(df)
+    # df_cossim = df[["leads", "genres"]].fillna("").apply(lambda x: ' '.join(x), axis=1)
+    # print(df_cossim)
+
+
     #nltk.download('wordnet')
-    CS_Rec = CosSim_Recommender()
+    CS_Rec = Cosine_Recommender(["overview"])
+    print(CS_Rec.make_recommendation(862, 10))
+    CS_Rec = Cosine_Recommender(["leads", "genres"])
+    print(CS_Rec.make_recommendation(862, 10))
+    CS_Rec = Cosine_Recommender(["keywords", "genres"])
+    print(CS_Rec.make_recommendation(862, 10))
+    CS_Rec = Cosine_Recommender(["cast"])
+    print(CS_Rec.make_recommendation(862, 10))
+    sys.exit()
+    # CS_Rec.create_model(["leads", "genres"], "category")
     CS_Rec.create_model(["overview"], "text")
-    #CS_Rec.create_model(["belongs_to_collection"])
-    CS_Rec.create_model(["leads", "genres"], "category")
     CS_Rec.create_model(["keywords", "genres"], "category")
     CS_Rec.create_model(["keywords", "genres", "leads"], "category")
     CS_Rec.create_model(["keywords"], "category")

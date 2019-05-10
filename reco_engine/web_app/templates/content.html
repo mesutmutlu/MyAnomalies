@@ -5,6 +5,12 @@
     <title>Content - {{ content['title'] }}</title>
 </head>
 <body>
+    <ul>
+        <li style="display:inline"><a href="/">Main</a></li>
+        <li style="display: inline"><a href="/users">Users</a></li>
+        <li style="display: inline"><a href="/contents">Contents</a></li>
+        <!--li style="display: inline"><a href="/ratings">Ratings</a></li-->
+    </ul>
     <h3>{{ content['title'] }}</h3>
     <table>
         {% for key, value in content.items() %}
@@ -31,7 +37,7 @@
     </div>
     <div style="float:left">
 
-    <h4>Cosine Genre TFIDF</h4>
+    <h4>Cosine Leads - Genre TFIDF</h4>
         <table>
             <tr>
                 <td><b>Title</b></td>
@@ -74,7 +80,7 @@
             {% endfor %}
         </table>
     </div>
-    <div style="float:clear">
+    <div style="float:left">
     <h4>Cosine User Ratings</h4>
         <table>
             <tr>
