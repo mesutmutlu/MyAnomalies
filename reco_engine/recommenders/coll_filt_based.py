@@ -5,6 +5,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from reco_engine.Lib_Content import Content, Content_Helper
 from reco_engine.Lib_User import User
 import numpy as np
+from surprise import SVD, SVDpp, Dataset, Reader, evaluate
+
 
 class Base_Recommender():
 
@@ -44,15 +46,22 @@ class CosSim_Recommender(Base_Recommender):
         # Obtain the id of the movie that matches the title
         Cnt = Content(idx)
         print("Finding similar movies based on ", idx, Cnt.content["title"], "using", self.model_key)
-        movie_sim = self.get_model()[[str(idx)]].rename(columns={str(idx): 'similarity'})
-        movie_sim = movie_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
-        return pd.concat([Content_Helper.get_contents_by_id_list(movie_sim.index.values.tolist())[["title"]], movie_sim], axis=1)[:n]
+        model = self.get_model()
+        if str(idx) in model.columns.values.tolist():
+            movie_sim = model[[str(idx)]].rename(columns={str(idx): 'similarity'})
+            movie_sim = movie_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
+            return pd.concat([Content_Helper.get_contents_by_id_list(movie_sim.index.values.tolist())[["title"]], movie_sim], axis=1)[:n]
+        else:
+            return pd.DataFrame(columns=["title", "similarity"])
 
     def make_recommendation_by_user(self, idx, n):
         # Obtain the id of the movie that matches the title
         Usr = User(idx)
         print("Finding similar movies for ", idx, Usr.user["username"], "using", self.model_key)
-        user_sim = self.get_model()[[str(idx)]].rename(columns={str(idx): 'similarity'})
+        model = self.get_model()
+        if str(idx) not in model.columns.values.tolist():
+            return pd.DataFrame(columns=["title", "pre_rating"])
+        user_sim = model[[str(idx)]].rename(columns={str(idx): 'similarity'})
         user_sim = user_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
         #print("similar_users")
         #print(pd.concat([Usr.get_users_by_id_list(user_sim.index.values.tolist()), user_sim], axis=1))
@@ -69,18 +78,42 @@ class CosSim_Recommender(Base_Recommender):
         #print(self.get_data()[self.get_data()["userId"]==11].sort_values(by=["rating"], ascending=False))
         return predicted_ratings.sort_values(by=["pre_rating"], ascending=False)[:n].reset_index()
 
+class SVD_Recommender(Base_Recommender):
+    def __init__(self, type):
+        Base_Recommender.__init__(self, type)
+
+    def create_model(self):
+        n = 61000
+
+        raw_data = self.get_data()[:n].fillna(0)[["userId", "id", "rating"]]
+        reader = Reader()
+        data = Dataset.load_from_df(raw_data, reader)
+        data.split(n_folds=5)
+        svdpp = SVDpp()
+        svdpp.fit(data)
+        trainset = data.build_full_trainset()
+        evaluate(svdpp, data, measures=['RMSE'])
 
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+    SVD_Rec = SVD_Recommender("user")
+    SVD_Rec.create_model()
+    #from surprise.model_selection import train_test_split
+
+
+    # Load the movielens-100k dataset (download it if needed),
+    #data = Dataset.load_builtin('ml-100k')
+    #trainset, testset = train_test_split(data, test_size=.25)
+    #print(trainset)
     #ratings = read_movie_ratings()
     #CS_Rec = CosSim_Recommender("movie")
     #CS_Rec.create_model()
-    CS_Rec = CosSim_Recommender("user")
+    #CS_Rec = CosSim_Recommender("user")
     #CS_Rec.create_model()
     #print(CS_Rec.get_model().shape)
     #print(CS_Rec.get_model())
-    print(CS_Rec.make_recommendation_by_user(22, 10))
+    #print(CS_Rec.make_recommendation_by_user(22, 10))
 
