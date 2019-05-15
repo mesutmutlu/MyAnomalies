@@ -28,10 +28,11 @@ def view_users():
 def view_user(id):
     Usr = User(id)
     user = json.loads(Usr.user.to_json(orient='records'))[0]
-    ratings = json.loads(Usr.get_rating_history().to_json(orient='records'))
+    ratings = json.loads(Usr.get_rating_history().reset_index().to_json(orient='records'))
     CS_Rec = W_CosSim_Recommender("user")
     pre_ratings = json.loads(CS_Rec.make_recommendation_by_user(id, 10).to_json(orient='records'))
-    return render_template("user.html", user=user, ratings=ratings, pre_ratings=pre_ratings)
+    sim_users = json.loads(Usr.get_similar_users(10).to_json(orient='records'))
+    return render_template("user.html", user=user, ratings=ratings, pre_ratings=pre_ratings, sim_users=sim_users)
 
 @app.route('/contents')
 def view_contents():
@@ -62,7 +63,6 @@ def view_content(id):
     WCSR = W_CosSim_Recommender("movie")
     watchhistsimcontents = WCSR.make_recommendation_by_movie(id,10).reset_index()
     watchhistsimcontents = json.loads(watchhistsimcontents.to_json(orient='records'))
-
     return render_template("content.html", content=content, descsimcontents=descsimcontents, genressimcontents=genressimcontents,
                            castsimcontents=castsimcontents, keywordsimcontents=keywordsimcontents, watchhistsimcontents=watchhistsimcontents)
 

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import names
 from reco_engine.Lib_Content import Content_Helper, Content
+from scipy import  sparse
 
 class User:
     def __init__(self, id):
@@ -14,13 +15,26 @@ class User:
         content_ratings= contents.merge(lst_ratings, left_on="id", right_on="id", how="inner")
         return content_ratings.set_index("id")
 
+    def get_similar_users(self, n):
+        user_matrix = sparse.load_npz(r"C:\datasets\the-movies-dataset\models\collaborative_based\coll_user.npz")
+        user_matrix_keys = np.loadtxt(r"C:\datasets\the-movies-dataset\models\collaborative_based\coll_user_keys.csv")
+        keys = [str(int(x)) for x in user_matrix_keys]
+        sim_users = pd.DataFrame(data=user_matrix.todense(), columns=keys, index=keys)[[str(self.id)]]\
+            .sort_values(by=[str(self.id)],ascending=False)[1:n+1]
+        sim_users.index.name = "userid"
+        sim_users = sim_users.rename(columns={str(self.id): 'similarity'}).reset_index()
+        lst_sim_users_id = [int(x) for x in sim_users["userid"].values.tolist()]
+        users = User_Helper.get_users_by_id_list(lst_sim_users_id)
+        return pd.concat([users.reset_index(), sim_users["similarity"]], axis=1)
+
+
 class User_Helper:
 
     def __init__(self):
         pass
 
     @staticmethod
-    def generate_user_list(self):
+    def generate_user_list():
         ratings = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_ratings.csv")
         lst_userid = ratings["userId"].unique().reshape(-1, 1)
         print(lst_userid.shape)
@@ -55,9 +69,10 @@ class User_Helper:
 
 if __name__ == "__main__":
 
-    user = User(2)
+    user = User(11)
     #print(user.user)
-    print(user.get_rating_history())
+    #print(User_Helper.get_users_by_id_list([101, 34]))
+    print(user.get_similar_users(10))
 
 
     #print(Usr.get_username_by_userid(2))

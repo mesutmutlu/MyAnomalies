@@ -11,15 +11,32 @@
         <li style="display: inline"><a href="/contents">Contents</a></li>
         <!--li style="display: inline"><a href="/ratings">Ratings</a></li-->
     </ul>
-    <h3>{{ user['username'] }}</h3>
-    <table>
-        {% for key, value in user.items() %}
-        <tr>
-            <td><b>{{ key }}</b></td>
-            <td>{{ value }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <div style="float:left">
+        <h3>{{ user['username'] }}</h3>
+        <table>
+            {% for key, value in user.items() %}
+            <tr>
+                <td><b>{{ key }}</b></td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div>
+        <h3>Similar Users</h3>
+        <table>
+            <tr>
+                <td><b>Username</b></td>
+                <td><b>Similarity</b></td>
+            </tr>
+            {% for user in sim_users %}
+            <tr>
+                <td><a href="http://127.0.0.1:5003/user/{{ user['userid'] }}">{{ user['username']}}</a></td>
+                <td>{{ user['similarity'] }} </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
     <div style="float:left">
         <h4>User Watch History</h4>
         <table>
@@ -29,7 +46,7 @@
             </tr>
             {% for content in ratings %}
             <tr>
-                <td><a href="http://127.0.0.1:5003/content/{{ ratings['id'] }}">{{ content['title']}}</a></td> <td>{{ content['rating'] }} </td>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['rating'] }} </td>
             </tr>
             {% endfor %}
         </table>
@@ -43,7 +60,7 @@
             </tr>
             {% for content in pre_ratings %}
             <tr>
-                <td><a href="http://127.0.0.1:5003/content/{{ ratings['id'] }}">{{ content['title']}}</a></td> <td>{{ content['pre_rating'] }} </td>
+                <td><a href="http://127.0.0.1:5003/content/{{ content['id'] }}">{{ content['title']}}</a></td> <td>{{ content['pre_rating'] }} </td>
             </tr>
             {% endfor %}
         </table>
