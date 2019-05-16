@@ -62,14 +62,13 @@ class CosSim_Recommender(Base_Recommender):
         Cnt = Content(idx)
         print("Finding similar movies based on ", idx, Cnt.content["title"], "using", self.model_key)
         model = self.get_model()
+        model = model.drop(str(idx))
         if str(idx) in model.columns.values.tolist():
             movie_sim = model[[str(idx)]].rename(columns={str(idx): 'similarity'})
             movie_sim = movie_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
-            print(movie_sim)
+            #print(movie_sim)
             sim_keys = [int(k) for k in movie_sim.index.values.tolist()]
-            print(sim_keys)
-            print(Content_Helper.get_contents_by_id_list(sim_keys))
-            return pd.concat([Content_Helper.get_contents_by_id_list(sim_keys)[["title"]], movie_sim["similarity"]], axis=1)[:n]
+            return pd.concat([Content_Helper.get_contents_by_id_list(sim_keys).reset_index()[["id","title"]], movie_sim.reset_index()["similarity"]], axis=1)[:n]
         else:
             return pd.DataFrame(columns=["title", "similarity"])
 

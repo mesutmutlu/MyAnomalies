@@ -27,7 +27,7 @@ class Base_Recommender():
 
     def get_model(self):
         #self.set_model_key(feature_list)
-        #print("model:","C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+self.model_type+".csv")
+        print("model:","C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+self.model_type+".csv")
         return pd.read_csv(
             r"C:\datasets\the-movies-dataset\models\content_based\content_" + self.model_key + "_"+self.model_type+".csv")
 
