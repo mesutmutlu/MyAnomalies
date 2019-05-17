@@ -123,6 +123,20 @@ class SVDPP_Recommender(Base_Recommender):
 
     def predict_rating_by_user_movie(self, userid, id):
         svdpp = joblib.load("C:/datasets/the-movies-dataset/models/collaborative_based/coll_svdpp.sav")
+        raw_data = self.get_ratings().fillna(0)[["userId", "id", "rating"]]
+        print(raw_data.shape)
+        print(svdpp.bu.shape)
+        print(svdpp.bi.shape)
+        print(np.transpose(svdpp.qi).shape)
+        print()
+        print(svdpp.pu.shape)
+        print(svdpp.yj.shape)
+        pr = np.dot(np.transpose(svdpp.qi), (svdpp.pu + ) + (mean + svdpp.bu + svdpp.bi)
+
+
+        mean = raw_data["rating"].mean()
+
+
         return svdpp.predict(userid, id).est
 
 class SVD_Recommender(Base_Recommender):
@@ -143,14 +157,23 @@ class SVD_Recommender(Base_Recommender):
 
     def predict_rating_by_user_movie(self, userid, id):
         svd = joblib.load("C:/datasets/the-movies-dataset/models/collaborative_based/coll_svd.sav")
+        print(svd.bu)
+        print(svd.bi)
+        print(np.transpose(svd.qi).shape)
+        print(svd.pu.shape)
+
+        filename = "C:/datasets/the-movies-dataset/models/collaborative_based/coll_svd.pred"
+        joblib.dump(np.dot(svd.pu,np.transpose(svd.qi)), filename)
+        print(joblib.load(filename)+svd.bi + svd.bu.reshape(-1,1))
         return svd.predict(userid, id).est
 
 if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    SVD_Rec = SVDPP_Recommender("user")
-    SVD_Rec.create_model()
+    SVD_Rec = SVD_Recommender("user")
+    #SVD_Rec.create_model()
+    SVD_Rec.predict_rating_by_user_movie(1, 197)
     #from surprise.model_selection import train_test_split
 
     sys.exit()
