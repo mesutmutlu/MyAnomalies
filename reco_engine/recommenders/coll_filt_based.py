@@ -84,7 +84,8 @@ class CosSim_Recommender(Base_Recommender):
         user_sim = model[[str(idx)]].rename(columns={str(idx): 'similarity'})
         user_sim = user_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
         #print(user_sim)
-        user_sim["similarity"] = user_sim["similarity"]/user_sim["similarity"].sum()
+        #weigted avearge regarding to similarity ventilation over similar top n users
+        #user_sim["similarity"] = user_sim["similarity"]/user_sim["similarity"].sum()
         #print(user_sim)
         #print("similar_users")
         users = [int(id) for id in user_sim.index.values.tolist()]
@@ -191,10 +192,10 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
     SVD_Rec = SVDPP_Recommender("user")
     #SVD_Rec.create_model()
-    SVD_Rec.predict_rating_by_user_movie(1, 197)
+    #SVD_Rec.predict_rating_by_user_movie(1, 197)
     #from surprise.model_selection import train_test_split
 
-    sys.exit()
+    #sys.exit()
     # Load the movielens-100k dataset (download it if needed),
     #data = Dataset.load_builtin('ml-100k')
     #trainset, testset = train_test_split(data, test_size=.25)
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     #CS_Rec.create_model()
     CS_Rec = CosSim_Recommender("user")
     CS_Rec.create_model()
-    CS_Rec.get_model()
+    #CS_Rec.get_model()
     #print(CS_Rec.get_model().shape)
     #print(CS_Rec.get_model())
     #print(CS_Rec.make_recommendation_by_user(22, 10))
