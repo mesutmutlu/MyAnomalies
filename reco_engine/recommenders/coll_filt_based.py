@@ -124,17 +124,35 @@ class SVDPP_Recommender(Base_Recommender):
     def predict_rating_by_user_movie(self, userid, id):
         svdpp = joblib.load("C:/datasets/the-movies-dataset/models/collaborative_based/coll_svdpp.sav")
         raw_data = self.get_ratings().fillna(0)[["userId", "id", "rating"]]
-        print(raw_data.shape)
-        print(svdpp.bu.shape)
-        print(svdpp.bi.shape)
-        print(np.transpose(svdpp.qi).shape)
-        print()
-        print(svdpp.pu.shape)
-        print(svdpp.yj.shape)
-        pr = np.dot(np.transpose(svdpp.qi), (svdpp.pu + ) + (mean + svdpp.bu + svdpp.bi)
+        raw_data = raw_data.pivot_table(values="rating", index="userId", columns="id")
+        mean = raw_data.mean()
+        iu = raw_data.groupby('userId').agg("count")
+        #print(iu)
+        #print(svdpp.yj)
+        sum_yj = np.sum(svdpp.yj, axis=1)
+        sum_yj = np.dot(iu, sum_yj)
+        iu_p = iu.apply(lambda x: np.power(np.linalg.norm(x),-0.5), axis=1)
+        #print(sum_yj.shape, iu_p.shape)
+        #print((svdpp.pu + (iu_p*sum_yj).values.reshape(-1,1)).shape, np.transpose(svdpp.qi).shape)
+        result = np.dot((svdpp.pu + (iu_p*sum_yj).values.reshape(-1,1)), np.transpose(svdpp.qi))
+        print(result.shape)
+        result = np.add(result, np.array([5]))
+        print(svdpp.bi)
+        result = result + svdpp.bu.reshape(-1,1)
+        result = result + svdpp.bi
+        print(result.shape)
+        print("----------")
+        print(np.interp(result, (result.min(), result.max()), (0.5, 5)))
+        # print(raw_data.shape)
+        # print(svdpp.bu.shape)
+        # print(svdpp.bi.shape)
+        #print(np.transpose(svdpp.qi).shape)
+        #print(svdpp.pu.shape)
+        #print(iu_dot_yj.shape)
+        #pr = np.dot(np.transpose(svdpp.qi), (svdpp.pu + ) + (mean + svdpp.bu + svdpp.bi)
 
 
-        mean = raw_data["rating"].mean()
+
 
 
         return svdpp.predict(userid, id).est
@@ -171,7 +189,7 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    SVD_Rec = SVD_Recommender("user")
+    SVD_Rec = SVDPP_Recommender("user")
     #SVD_Rec.create_model()
     SVD_Rec.predict_rating_by_user_movie(1, 197)
     #from surprise.model_selection import train_test_split
