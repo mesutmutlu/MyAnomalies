@@ -72,7 +72,7 @@ if __name__ == "__main__":
     user = User(11)
     #print(user.user)
     #print(User_Helper.get_users_by_id_list([101, 34]))
-    print(user.get_similar_users(10))
+    print(User_Helper.get_user_list())
 
 
     #print(Usr.get_username_by_userid(2))

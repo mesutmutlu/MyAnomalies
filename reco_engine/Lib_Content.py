@@ -44,12 +44,5 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    print(Content_Helper.get_contents_by_id_list([24684, 198062, 102304,  27437,  14845 , 25095  ,14205  ,49022 ,120292 , 18041]))
-    print(Content_Helper.get_content_by_id(24684))
-
-    sys.exit()
-    Cnt = Content()
-    print(Cnt.get_id_by_title("Hideaway"))
-    Cnt.load_content_list()
-    print(Cnt.get_contents_by_id_list([24684, 198062, 102304,  27437,  14845 , 25095  ,14205  ,49022 ,120292 , 18041]))
+    print(User_Helper.get_user_list())
     #23805, 47439, 92331, 507, 30970, 26243, 24086, 6715, 36998, 15514
