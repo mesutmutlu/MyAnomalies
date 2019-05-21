@@ -1,13 +1,11 @@
-from flask import Flask, request, jsonify, render_template
-from flask_restful import Resource, Api
-from sqlalchemy import create_engine
-from json import dumps
+from flask import Flask, render_template
+from flask_restful import Api
 from reco_engine.Lib_User import User, User_Helper
 from reco_engine.Lib_Content import Content, Content_Helper
 import pandas as pd
 import json
 import sys
-from reco_engine.recommenders.content_based import Cosine_Recommender
+from reco_engine.algorithms.content_based import Cosine_Recommender
 from reco_engine.recommenders.coll_filt_based import CosSim_Recommender as W_CosSim_Recommender
 
 #db_connect = create_engine('sqlite:///chinook.db')

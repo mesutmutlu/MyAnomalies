@@ -72,38 +72,29 @@ class CosSim_Recommender(Base_Recommender):
         else:
             return pd.DataFrame(columns=["title", "similarity"])
 
-    def make_recommendation_by_user(self, idx, n):
+    def make_recommendation_by_user(self, idx, n, mode="train"):
         # Obtain the id of the movie that matches the title
         Usr = User(idx)
-        #print(Usr.user)
+        print(mode)
         print("Finding similar movies for ", idx, Usr.user["username"], "using", self.model_key)
         model = self.get_model()
-        #print(model)
         if str(idx) not in model.columns.values.tolist():
             return pd.DataFrame(columns=["title", "pre_rating"])
         user_sim = model[[str(idx)]].rename(columns={str(idx): 'similarity'})
         user_sim = user_sim.sort_values(by=["similarity"], ascending=False)[1:n + 1]
-        #print(user_sim)
-        #weigted avearge regarding to similarity ventilation over similar top n users
-        #user_sim["similarity"] = user_sim["similarity"]/user_sim["similarity"].sum()
-        #print(user_sim)
-        #print("similar_users")
         users = [int(id) for id in user_sim.index.values.tolist()]
-        #print(pd.concat([Usr.get_users_by_id_list(user_sim.index.values.tolist()), user_sim], axis=1))
-        ratings = self.get_ratings().pivot_table(values="rating", columns=self.pv_index, index=self.pv_columns).fillna(0)[users]
-        #print(user_sim.index.values.tolist())
-        #print(ratings.loc[862,user_sim.index.values.tolist()])
-        #print(ratings)
-        predicted_ratings = pd.DataFrame(data=np.dot(ratings, user_sim), index = ratings.index.values.tolist(), columns=["pre_rating"])
-        #print(predicted_ratings)
+
+        ratings = self.get_ratings().pivot_table(values="rating", columns=self.pv_index, index=self.pv_columns)[users]\
+            .apply(lambda row: row.fillna(row.sum()/n), axis=1)
+        mul1 = np.dot(ratings, user_sim)
+        denom1 = user_sim.sum().values
+        predicted_ratings = pd.DataFrame(data= (mul1 / denom1)+(Usr.get_rating_history()["rating"].std()), index = ratings.index.values.tolist(), columns=["pre_rating"])
+        print(predicted_ratings)
         predicted_ratings.index.name = "id"
-        predicted_ratings.drop(labels=Usr.get_rating_history().index,inplace=True, axis=0)
-        #print(predicted_ratings)
-        #print(Cnt.movielist.set_index("id"))
+        print(len(predicted_ratings), len(predicted_ratings.drop(labels=Usr.get_rating_history().index, axis=0)))
+        if mode == "live":
+            predicted_ratings.drop(labels=Usr.get_rating_history().index,inplace=True, axis=0)
         predicted_ratings= predicted_ratings.join(Content_Helper.get_content_list()["title"], how="left")
-        #print(predicted_ratings.sort_values(by=["pre_rating"], ascending=False))
-        #print(self.get_data()[self.get_data()["userId"]==11].sort_values(by=["rating"], ascending=False))
-        #print(predicted_ratings)
         return predicted_ratings.sort_values(by=["pre_rating"], ascending=False)[:n].reset_index()
 
 class SVDPP_Recommender(Base_Recommender):
@@ -192,8 +183,9 @@ if __name__ == "__main__":
     pd.set_option('display.width', 1000)
     SVD_Rec = SVDPP_Recommender("user")
     #SVD_Rec.create_model()
-    #SVD_Rec.predict_rating_by_user_movie(1, 197)
+    print(SVD_Rec.predict_rating_by_user_movie(24, 745))
     #from surprise.model_selection import train_test_split
+
 
     #sys.exit()
     # Load the movielens-100k dataset (download it if needed),

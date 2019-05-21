@@ -37,9 +37,9 @@ class User_Helper:
     def generate_user_list():
         ratings = pd.read_csv(r"C:\datasets\the-movies-dataset\prep_ratings.csv")
         lst_userid = ratings["userId"].unique().reshape(-1, 1)
-        print(lst_userid.shape)
+        #print(lst_userid.shape)
         lst_usernames = np.array([names.get_full_name() for i in range(len(lst_userid))]).reshape(-1, 1)
-        print(lst_usernames.shape)
+        #print(lst_usernames.shape)
         users = pd.DataFrame(data=np.concatenate((lst_userid, lst_usernames), axis=1), columns=["userid", "username"])
         users.to_csv(r"C:\datasets\the-movies-dataset\users.csv", index=False)
 
@@ -50,13 +50,14 @@ class User_Helper:
 
     @staticmethod
     def get_user_by_id(id):
-        users = pd.read_csv(r"C:\datasets\the-movies-dataset\users.csv", index_col="userid")
+        users = User_Helper.get_user_list()
         user_metadata = pd.read_csv(r"C:\datasets\the-movies-dataset\u.user", delimiter="|", header=None)
         user_metadata.columns = ["userid", "age", "sex", "occupation" ,"todrop"]
         user_metadata.drop("todrop", axis=1, inplace=True)
         user_metadata.set_index("userid")
+        #print(user_metadata)
         users = users.merge(user_metadata, left_on=["userid"], right_on=["userid"], how="inner" )
-        return users.reindex([id])
+        return users.set_index("userid").reindex([id])
 
     @staticmethod
     def get_users_by_id_list(lst_id):
@@ -65,14 +66,14 @@ class User_Helper:
 
 
 
-
-
 if __name__ == "__main__":
 
     user = User(11)
     #print(user.user)
     #print(User_Helper.get_users_by_id_list([101, 34]))
-    print(User_Helper.get_user_list())
+    print(User_Helper.get_user_by_id(1))
+    (print(User_Helper.get_user_list()))
+
 
 
     #print(Usr.get_username_by_userid(2))
