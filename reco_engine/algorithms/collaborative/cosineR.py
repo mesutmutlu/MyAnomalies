@@ -3,6 +3,7 @@ from reco_engine import Config
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 from sklearn.externals import joblib
+import numpy as np
 
 
 class CosineContentR(BaseEstimator, ClassifierMixin):
@@ -21,14 +22,40 @@ class CosineContentR(BaseEstimator, ClassifierMixin):
         if pv_values is not None:
             self.pv_values = pv_values
         pv_data = data.pivot_table(values=self.pv_values, index=self.pv_index, columns=self.pv_columns)
-        print(pv_data)
+        #print(pv_data)
+        mu = pv_data.mean(axis=1)
+        mu.loc[-1] = mu.mean()
+        #print(mu)
         #adjust ratings to evite the user tendence like hihg or low rating
-        pv_data = pv_data-pv_data.mean()
-        print(pv_data)
-        #add mock rating data based on means of each user to recommend never watched contents
-        pv_data.loc[-1] = [pv_data[c].mean() for c in pv_data.columns.values.tolist()]
-        pv_data.fillna(0, inplace=True)
-        sim_matrix = cosine_similarity(pv_data, pv_data)
+
+        pv_data_adjusted = pv_data.subtract(pv_data.mean(axis=1), axis=0)
+        print(pv_data[0:1].sum(axis=1))
+        print(pv_data[0:1].mean(axis=1))
+        print(pv_data.shape, mu.shape, pv_data_adjusted.shape)
+        # add mock rating data based on means of each user to recommend never watched contents
+
+        pv_data_adjusted.loc[-1] = [pv_data_adjusted[c].mean() for c in pv_data_adjusted.columns.values.tolist()]
+        pv_data_implicit = pv_data_adjusted.notnull().astype(int)
+
+        #print(pv_data_adjusted)
+        #print(pv_data_implicit)
+        pv_data_adjusted.fillna(0, inplace=True)
+        sim_matrix = cosine_similarity(pv_data_adjusted, pv_data_adjusted)
+        print(mu.shape, sim_matrix.shape, pv_data_adjusted.shape, pv_data_implicit.shape)
+        print("sim matrix")
+        print(np.sum(sim_matrix[0:1]))
+        print("data adjusted")
+        print(pv_data_adjusted.loc[:,1])
+
+        nominator = np.dot(sim_matrix, pv_data_adjusted)
+        print("nominator")
+        print(nominator)
+        denominator = np.absolute(np.dot(sim_matrix,pv_data_implicit))
+        print("denominator")
+        print(denominator)
+        #denominator[denominator == 0] = 1
+        self.model = np.add(mu.values.reshape(-1,1),(nominator / denominator))
+        #print(self.model)
         self.model = sparse.csr_matrix(sim_matrix)
         self.model_keys = pv_data.index.tolist()
         #self.model=pd.DataFrame(data=sim_matrix, index=pv_data.index.tolist(), columns=pv_data.index.tolist())
@@ -99,11 +126,51 @@ class CosineUserR(BaseEstimator, ClassifierMixin):
 if __name__ == "__main__":
 
     import pandas as pd
+    import sys
+    sys.stdout.buffer.write(chr(9986).encode('utf8'))
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
+    v = [["u1", "i3", 2],
+        ["u1", "i3", 3],
+         ["u2", "i2", 3],
+         ["u2", "i3", 3],
+         ["u2", "i4", 1],
+         ["u2", "i5", 4],
+         ["u2", "i6", 4],
+         ["u3", "i3", 5],
+         ["u3", "i4", 3],
+         ["u3", "i5", 3],
+         ["u4", "i2", 5],
+         ["u4", "i4", 5],
+         ["u5", "i1", 2.5],
+         ["u5", "i2", 4],
+         ["u5", "i3", 2],
+         ["u5", "i6", 4],
+         ["u6", "i4", 2],
+         ["u7", "i1", 1],
+         ["u7", "i3", 3],
+         ]
+    data = pd.DataFrame(data=)
+    # b1 = pd.DataFrame(data = [[1,2],[1,10]])
+    # print(b1)
+    # print(b1.mean(axis=1))
+    # print(b1-b1.mean(axis=1))
+
+
+
+
     import time
     ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\prep_ratings.csv')
+
+    # pv_data = ratings.pivot_table(values="rating", index="id", columns="userId")
+    # #print(pv_data.mean(axis=1).reshape(-1,1))
+    # print(pv_data)
+    # print(pv_data.mean(axis=1))
+    # print(pv_data.subtract(pv_data.mean(axis=1), axis=0))
+    #sys.exit()
     CCR = CosineContentR()
 
-    CCR.fit(ratings)
+    CCR.fit(ratings,pv_index="id", pv_columns="userId")
     #joblib.dump(CCR, "test.sav")
     #CCR = None
     #CCR2 = joblib.load("test.sav")
