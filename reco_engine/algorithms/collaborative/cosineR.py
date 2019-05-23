@@ -6,75 +6,96 @@ from sklearn.externals import joblib
 import numpy as np
 
 
-class CosineContentR(BaseEstimator, ClassifierMixin):
+class CosineR(BaseEstimator, ClassifierMixin):
 
-    def __init__(self):
-        self.pv_index = Config.Attributes.c_contentId
-        self.pv_columns = Config.Attributes.c_userId
-        self.pv_values = Config.Attributes.c_rating
-        self.model = None
+    def __init__(self, c_index=None, c_columns=None):
+        self.pv_index = c_index
+        self.pv_columns = c_columns
+        self.predictions = None
+        self.rows = None
+        self.columns = None
 
-    def fit(self, data, pv_index=None, pv_columns=None, pv_values=None):
-        if pv_index is not None:
-            self.pv_index = pv_index
-        if pv_columns is not None:
-            self.pv_columns = pv_columns
-        if pv_values is not None:
-            self.pv_values = pv_values
-        pv_data = data.pivot_table(values=self.pv_values, index=self.pv_index, columns=self.pv_columns)
-        #print(pv_data)
+    def fit(self, x=None, y=None):
+        print(type(x), type(y))
+        print(x.shape, y.shape)
+        if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
+            x = x.to_numpy()
+
+        if (type(y) == pd.DataFrame) or (type(y) == pd.Series):
+            y = y.to_numpy().reshape(-1,1)
+
+        if type(y) == list:
+            y = np.array(y).reshape(-1,1).ravel()
+
+        if  y.ndim != 1:
+            y = y.ravel()
+
+        if x.shape[1] != 2:
+            raise SystemExit("x should have 2 columns, first as values for which the similarity will be calculated")
+
+        if y.ndim != 1:
+            raise SystemExit("y should have 1 column")
+
+        if len(x) != len(y):
+            raise SystemExit("x and y should have same length")
+        
+        rows, row_pos = np.unique(x[:, 0], return_inverse=True)
+        cols, col_pos = np.unique(x[:, 1], return_inverse=True)
+
+        pivot_table = np.zeros((len(rows), len(cols)), dtype=np.float)
+        pivot_table[row_pos, col_pos] = y
+
+        pv_data = pd.DataFrame(data=pivot_table, index=rows, columns=cols)
+        pv_data.replace(0, np.NaN, inplace=True)
+        # add mock values data based on means of each column(ex for items for user/item matrix
+        pv_data.loc[-1] = pv_data.mean(axis=0).values.T
         mu = pv_data.mean(axis=1)
-        mu.loc[-1] = mu.mean()
-        #print(mu)
-        #adjust ratings to evite the user tendence like hihg or low rating
 
-        pv_data_adjusted = pv_data.subtract(pv_data.mean(axis=1), axis=0)
-        print(pv_data[0:1].sum(axis=1))
-        print(pv_data[0:1].mean(axis=1))
-        print(pv_data.shape, mu.shape, pv_data_adjusted.shape)
-        # add mock rating data based on means of each user to recommend never watched contents
+        #adjust values to evite the user tendence like high or low rating
+        pv_data_adjusted = pv_data.subtract(mu, axis=0) + 0.1 #0.1 as regularization factor
 
-        pv_data_adjusted.loc[-1] = [pv_data_adjusted[c].mean() for c in pv_data_adjusted.columns.values.tolist()]
         pv_data_implicit = pv_data_adjusted.notnull().astype(int)
 
-        #print(pv_data_adjusted)
-        #print(pv_data_implicit)
         pv_data_adjusted.fillna(0, inplace=True)
         sim_matrix = cosine_similarity(pv_data_adjusted, pv_data_adjusted)
-        print(mu.shape, sim_matrix.shape, pv_data_adjusted.shape, pv_data_implicit.shape)
-        print("sim matrix")
-        print(np.sum(sim_matrix[0:1]))
-        print("data adjusted")
-        print(pv_data_adjusted.loc[:,1])
 
         nominator = np.dot(sim_matrix, pv_data_adjusted)
-        print("nominator")
-        print(nominator)
         denominator = np.absolute(np.dot(sim_matrix,pv_data_implicit))
-        print("denominator")
-        print(denominator)
-        #denominator[denominator == 0] = 1
-        self.model = np.add(mu.values.reshape(-1,1),(nominator / denominator))
-        #print(self.model)
-        self.model = sparse.csr_matrix(sim_matrix)
-        self.model_keys = pv_data.index.tolist()
-        #self.model=pd.DataFrame(data=sim_matrix, index=pv_data.index.tolist(), columns=pv_data.index.tolist())
 
-    def predict(self, contentId, n=10):
-        print("Finding similar movies based on ", contentId)
-        if self.model is None:
+        p_ratings = np.add(mu.values.reshape(-1,1),(nominator / denominator))
+        self.predictions = sparse.csr_matrix(p_ratings)
+        self.similarity_matrix = sparse.csr_matrix(sim_matrix)
+
+        self.rows = np.append(rows, [-1])
+        self.columns = cols
+
+    def predict(self, x0_id=None, x1_id=None, n=10):
+        print("Predicting rating of", x1_id, "for", x0_id)
+        if self.predictions is None:
             raise SystemExit('You should fit your estimator or load the model before make a prediction')
-        if contentId not in self.model_keys:
-            print('Content requested has not any watch history recommendation through mock data')
-            contentId = -1
+        if x0_id == None:
+            raise SystemExit('x0_id should be defined')
+        if x1_id == None:
+            raise SystemExit('x1_id should be defined')
+        if x0_id not in self.rows:
+            x0_id = -1
 
-        pd_model = pd.DataFrame(self.model.todense(), index=self.model_keys, columns=self.model_keys).drop(contentId)
-        sim_movies = pd_model[[contentId]].rename(columns={contentId: 'similarity'})
-        sim_movies.index.name = self.pv_index
-        print(pd_model)
-        sim_movies = sim_movies.sort_values(by=["similarity"], ascending=False)[1:n + 1]
+        pre_ratings = pd.DataFrame(self.predictions.todense(), index=self.rows, columns=self.columns).loc[x0_id]
 
-        return sim_movies
+        return pre_ratings.sort_values(ascending=False)[:n]
+
+    def get_similars(self, x0_id, n=10):
+
+        if self.similarity_matrix is None:
+            raise SystemExit('You should fit your estimator or load the model to get similarities')
+        if x0_id == None:
+            raise SystemExit('x0_id should be defined')
+        if x0_id not in self.rows:
+            x0_id = -1
+
+        similarities = pd.DataFrame(self.similarity_matrix.todense(), index=self.rows, columns=self.rows).loc[x0_id].drop(x0_id)
+        return similarities.sort_values(ascending=False)[:n]
+
 
 class CosineUserR(BaseEstimator, ClassifierMixin):
 
@@ -130,7 +151,7 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    v = [["u1", "i3", 2],
+    v = np.array([["u1", "i3", 2],
         ["u1", "i3", 3],
          ["u2", "i2", 3],
          ["u2", "i3", 3],
@@ -147,10 +168,13 @@ if __name__ == "__main__":
          ["u5", "i3", 2],
          ["u5", "i6", 4],
          ["u6", "i4", 2],
-         ["u7", "i1", 1],
-         ["u7", "i3", 3],
-         ]
-    data = pd.DataFrame(data=)
+         ["u7", "i2", 1],
+         ["u7", "i5", 3],
+         ])
+
+    #print(v[:,0:2])
+    #sys.exit()
+    data = pd.DataFrame(data=v, columns=["userId", "id", "rating"])
     # b1 = pd.DataFrame(data = [[1,2],[1,10]])
     # print(b1)
     # print(b1.mean(axis=1))
@@ -168,9 +192,12 @@ if __name__ == "__main__":
     # print(pv_data.mean(axis=1))
     # print(pv_data.subtract(pv_data.mean(axis=1), axis=0))
     #sys.exit()
-    CCR = CosineContentR()
+    CCR = CosineR(c_index="userId", c_columns="id")
+    CCR.fit(v[:,0:2], v[:,2])
+    CCR.predict("u5", "i6", 3)
+    print(CCR.get_similars("u5", 3))
 
-    CCR.fit(ratings,pv_index="id", pv_columns="userId")
+    #CCR.fit(data,pv_index="id", pv_columns="userId")
     #joblib.dump(CCR, "test.sav")
     #CCR = None
     #CCR2 = joblib.load("test.sav")
