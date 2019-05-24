@@ -77,7 +77,7 @@ class CosineR(BaseEstimator, RegressorMixin):
         if self.predictions is None:
             raise SystemExit('You should fit your estimator or load the model before make a prediction')
 
-        pre_ratings = np.empty((len(x),))
+        pre_ratings = np.zeros((len(x),))
 
         model = pd.DataFrame(self.predictions.todense(), index=self.rows, columns=self.columns)
         for i in range(len(x)):
@@ -104,8 +104,8 @@ class CosineR(BaseEstimator, RegressorMixin):
         similarities = pd.DataFrame(self.similarity_matrix.todense(), index=self.rows, columns=self.rows).loc[x0_id].drop(x0_id)
         return similarities.sort_values(ascending=False)[:n]
 
-    def score(self, x=None, y=None):
-        pass
+    #def score(self, x=None, y=None):
+        #pass
 
 
 class CosineUserR(BaseEstimator, ClassifierMixin):
@@ -163,8 +163,6 @@ if __name__ == "__main__":
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     a = np.array(["u4", "i4"])
-    print(a)
-    print(a[0], a[1])
 
     v = np.array([["u1", "i3", 2],
         ["u1", "i3", 3],
@@ -197,7 +195,7 @@ if __name__ == "__main__":
     CCR = CosineR(c_index="userId", c_columns="id")
     CCR.fit(v[:,0:2], v[:,2])
     print(CCR.predict(np.array([["u4", "i4"],["u5", "i1"]])))
-
+    print(CCR.score(v[:,0:2], v[:,2].astype(float).ravel()))
 
 
 
@@ -214,7 +212,7 @@ if __name__ == "__main__":
     CCR = CosineR(c_index="userId", c_columns="id")
     CCR.fit(ratings[["userId", "id"]], ratings["rating"])
     print(CCR.score(ratings[["userId", "id"]],ratings["rating"]))
-    print(CCR.predict(np.array([[11, 197]])))
+    print(CCR.predict(ratings[["userId", "id"]]))
     #print(CCR.get_similars(11, 3))
 
     #CCR.fit(data,pv_index="id", pv_columns="userId")
