@@ -16,7 +16,7 @@ def r_precision(y_pred, y_true, k=None):
     print(y_pred)
     y_true = np.apply_along_axis(check_level, 1, arr=y_true[:k+1].reshape(-1, 1))
     print(y_true)
-    print(np.dot(y_pred, y_true.T)/len(y_pred))
+    #print(np.dot(y_pred, y_true.T)/len(y_pred))
     return np.dot(y_pred, y_true.T)/len(y_pred)
 
 def r_recall(y_pred, y_true, k=None):
@@ -53,8 +53,11 @@ def r_average_precision(y_pred, y_true, k=None):
 if __name__ == "__main__":
 
     tr = np.array([2,3,3.5,2,4,4])
-    pr = np.array([4.5,5,4,3,4,2])
+    pr = np.array([1,5,4,3,4,2])
 
-    print(r_precision(tr,pr))
-    print(r_recall(tr,pr))
+    #print(r_precision(tr,pr))
+    #print(r_recall(tr,pr))
+    k = 5
+    for i in range(k):
+        print(r_precision(tr, pr, i))
     print(r_average_precision(tr, pr, k=5))
