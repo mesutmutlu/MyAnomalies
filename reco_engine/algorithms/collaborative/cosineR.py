@@ -75,20 +75,19 @@ class CosineR(BaseEstimator, RegressorMixin):
         if x.ndim != 2:
             raise SystemExit("You should enter a numpy array of shape (n,2) as input")
         if self.predictions is None:
-            raise SystemExit('You should fit your estimator or load the model before make a prediction')
+            raise SystemExit('You should fit your estimator or load a fitted model before make a prediction')
 
         pre_ratings = np.zeros((len(x),))
 
         model = pd.DataFrame(self.predictions.todense(), index=self.rows, columns=self.columns)
         for i in range(len(x)):
-            if (x[i, 0]== np.NaN) or (x[i, 1]== np.NaN):
+            if (x[i, 0] == np.NaN) or (x[i, 1] == np.NaN):
                 raise SystemExit('X should not have NaN value')
-
             if x[i, 0] not in self.rows.tolist():
                 x[i, 0] = -1
             if x[i, 1] not in self.columns.tolist():
-                raise SystemExit(x[i, 1] + ' not in model')
-            pre_ratings[i] = model.loc[x[i,0], x[i,1]]
+                raise SystemExit(x[i, 1] + ' not in model as to be predicted')
+            pre_ratings[i] = model.loc[x[i, 0], x[i, 1]]
 
         return pre_ratings
 
@@ -96,13 +95,13 @@ class CosineR(BaseEstimator, RegressorMixin):
 
         if self.similarity_matrix is None:
             raise SystemExit('You should fit your estimator or load the model to get similarities')
-        if x0_id == None:
+        if x0_id is None:
             raise SystemExit('x0_id should be defined')
         if x0_id not in self.rows.tolist():
             x0_id = -1
 
-        similarities = pd.DataFrame(self.similarity_matrix.todense(), index=self.rows, columns=self.rows).loc[x0_id].drop(x0_id)
-        return similarities.sort_values(ascending=False)[:n]
+        similarities = pd.DataFrame(self.similarity_matrix.todense(), index=self.rows, columns=self.rows).loc[x0_id]#.drop(x0_id)
+        return similarities.sort_values(ascending=False)[:n+1]
 
     #def score(self, x=None, y=None):
         #pass
@@ -194,8 +193,9 @@ if __name__ == "__main__":
     # print(b1-b1.mean(axis=1))
     CCR = CosineR(c_index="userId", c_columns="id")
     CCR.fit(v[:,0:2], v[:,2])
-    print(CCR.predict(np.array([["u4", "i4"],["u5", "i1"]])))
-    print(CCR.score(v[:,0:2], v[:,2].astype(float).ravel()))
+    #print(CCR.predict(np.array([["u4", "i4"],["u5", "i1"]])))
+    #print(CCR.score(v[:,0:2], v[:,2].astype(float).ravel()))
+    CCR.get_similars("u7")
 
 
 
@@ -211,9 +211,9 @@ if __name__ == "__main__":
     #sys.exit()
     CCR = CosineR(c_index="userId", c_columns="id")
     CCR.fit(ratings[["userId", "id"]], ratings["rating"])
-    print(CCR.score(ratings[["userId", "id"]],ratings["rating"]))
-    print(CCR.predict(ratings[["userId", "id"]]))
-    #print(CCR.get_similars(11, 3))
+    #print(CCR.score(ratings[["userId", "id"]],ratings["rating"]))
+    #print(CCR.predict(ratings[["userId", "id"]]))
+    print(CCR.get_similars(11, 3))
 
     #CCR.fit(data,pv_index="id", pv_columns="userId")
     #joblib.dump(CCR, "test.sav")
