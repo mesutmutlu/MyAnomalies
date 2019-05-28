@@ -10,8 +10,6 @@ from scipy import linalg
 import pandas as pd
 from scipy.misc import derivative
 
-
-
 class SvdR(BaseEstimator, RegressorMixin):
 
     def __init__(self, c_index=None, c_columns=None):
@@ -21,7 +19,8 @@ class SvdR(BaseEstimator, RegressorMixin):
         self.rows = None
         self.columns = None
 
-    def fit(self, x=None, y=None):
+    def fit(self, x=None, y=None, randomstate=42):
+        np.random.seed(randomstate)
         if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
             x = x.values
 
@@ -225,6 +224,7 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
             pre_ratings[i] = model.loc[x[i, 0], x[i, 1]]
 
         return pre_ratings
+
 
 class SvdPPR(BaseEstimator, RegressorMixin):
 
