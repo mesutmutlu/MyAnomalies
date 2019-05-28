@@ -102,7 +102,7 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
         self.rows = None
         self.columns = None
 
-    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=100, early_stop=0.1):
+    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=100, early_stop=0.1, regularization=0.01):
         if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
             x = x.values
 
@@ -135,10 +135,9 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
 
         # add mock values data based on means of each column(ex for items for user/item matrix
         pv_data.loc[-1] = pv_data.mean(axis=0).values.T
-        self.mu = pv_data.mean(axis=1)
 
         #adjust values to evite the user tendence like high or low rating
-        pv_data_adjusted = pv_data.subtract(self.mu, axis=0) + 0.1 #0.1 as regularization factor
+        pv_data_adjusted = pv_data.subtract(pv_data.mean(axis=1), axis=0) + 0.1 #0.1 as regularization factor
         #print(pv_data_adjusted)
         pv_data_adjusted = pv_data_adjusted.values
 
@@ -154,8 +153,11 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
         self.n_items = len(self.columns)
         self.num_ratings = np.count_nonzero(~np.isnan(pv_data))
 
-        user_mat = np.random.rand(self.n_users, self.latent_features)
-        item_mat = np.random.rand(self.latent_features, self.n_items)
+        self.user_mat = np.random.rand(self.n_users, self.latent_features)
+        self.item_mat = np.random.rand(self.latent_features, self.n_items)
+        self.bu = np.random.rand(self.n_users, 1)
+        self.bi = np.random.rand(self.n_items, 1)
+        self.mu = pv_data.mean()
 
         sse_accum = 0
 
@@ -174,26 +176,22 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
                         # product of the user and item latent features
                         diff = (
                                 pv_data_adjusted[i, j]
-                                - np.dot(user_mat[i, :], item_mat[:, j])
+                                - np.dot(self.user_mat[i, :], self.item_mat[:, j])
                         )
                         # Keep track of the sum of squared errors for the
                         # matrix
                         sse_accum += diff ** 2
+                        self.bu[i] += self.learning_rate * (diff - regularization * self.bu[i])
+                        self.bi[j] += self.learning_rate * (diff - regularization * self.bu[j])
 
                         for k in range(self.latent_features):
-                            user_mat[i, k] += (
-                                    self.learning_rate * (2 * diff * item_mat[k, j])
-                            )
+                            self.user_mat[i, k] += self.learning_rate * \
+                                                   (diff * self.item_mat[k, j] - regularization * self.user_mat[i, k])
 
-                            item_mat[k, j] += (
-                                    self.learning_rate * (2 * diff * user_mat[i, k])
-                            )
+                            self.item_mat[k, j] += self.learning_rate * \
+                                                   (diff * self.user_mat[i, k] - regularization * self.item_mat[k, j])
 
             print(f"\t{iteration+1} \t\t {sse_accum/self.num_ratings} ")
-
-        # Keep these matrices for later
-        self.user_mat = user_mat
-        self.item_mat = item_mat
 
 
     def predict(self, x=None):
