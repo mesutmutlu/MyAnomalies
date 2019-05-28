@@ -102,7 +102,9 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
         self.rows = None
         self.columns = None
 
-    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=100, early_stop=0.1, regularization=0.01):
+    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=1000, early_stop=0.1,
+            regularization=0.01, randomstate=42):
+        np.random.seed(randomstate)
         if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
             x = x.values
 
@@ -157,21 +159,23 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
         self.item_mat = np.random.rand(self.latent_features, self.n_items)
         self.bu = np.random.rand(self.n_users, 1)
         self.bi = np.random.rand(self.n_items, 1)
-        self.mu = pv_data.mean()
+        self.mu = pv_data.mean().values
 
         sse_accum = 0
 
         print("Iterations \t\t Mean Squared Error ")
-
+        print(pv_data)
         for iteration in range(self.iters):
             old_sse = sse_accum
             sse_accum = 0
-
+            #print(iteration, old_sse, self.num_ratings, old_sse/self.num_ratings)
+            if (iteration != 0) & (old_sse/self.num_ratings < 0.1):
+                break
             for i in range(self.n_users):
                 for j in range(self.n_items):
 
                     # if the rating exists (so we train only on non-missval)
-                    if pv_data[i, j] > 0:
+                    if pv_data_adjusted[i, j] > 0:
                         # compute the error as the actual minus the dot
                         # product of the user and item latent features
                         diff = (
@@ -192,6 +196,10 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
                                                    (diff * self.user_mat[i, k] - regularization * self.item_mat[k, j])
 
             print(f"\t{iteration+1} \t\t {sse_accum/self.num_ratings} ")
+
+        self.predictions = sparse.csr_matrix(np.dot(self.user_mat, self.item_mat) + self.mu + self.bu +self.bi.reshape(1,len(self.bi)))
+        self.rows = np.append(rows, [-1])
+        self.columns = cols
 
 
     def predict(self, x=None):
@@ -217,14 +225,6 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
             pre_ratings[i] = model.loc[x[i, 0], x[i, 1]]
 
         return pre_ratings
-
-    def f_funk(self, pu, qi):
-        return pu * qi
-
-    def f_funk_loss(self, f_funk, x0, y0, y_true):
-        pass
-
-
 
 class SvdPPR(BaseEstimator, RegressorMixin):
 
@@ -428,6 +428,19 @@ if __name__ == "__main__":
     # print(b1.mean(axis=1))
     # print(b1-b1.mean(axis=1))
     svd = SvdR(c_index="userId", c_columns="id")
-    svd.fit(v[:, 0:2], v[:, 2])
-    print(svd.predictions)
-    print(svd.predict(np.array([["u1", "i3"],["u1", "i4"]])))
+    fsvd = FunkSvdR(c_index="userId", c_columns="id")
+    fsvd.fit(v[:, 0:2], v[:, 2])
+
+    print("user_mat")
+    print(fsvd.user_mat)
+    print("item_mat")
+    print(fsvd.item_mat)
+    print("mu")
+    print(fsvd.mu)
+    print("bu")
+    print(fsvd.bu)
+    print("bi")
+    print(fsvd.bi)
+
+    print(fsvd.predict(v[:, 0:2]))
+    print(v[:, 2])
