@@ -295,7 +295,8 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         self.bu = np.random.rand(self.n_users, 1)
         self.bi = np.random.rand(self.n_items, 1)
         self.mu = pv_data.mean().values #by row
-        self.yj = np.random.rand(self.latent_features, self.n_items)
+
+        self.yj = np.random.rand( self.n_items, self.latent_features)
 
         sse_accum = 0
 
@@ -313,14 +314,14 @@ class SvdPPR(BaseEstimator, RegressorMixin):
                 for j in range(self.n_items):
 
                     # if the rating exists (so we train only on non-missval)
-                    if pv_data_adjusted[i, j] is not np.NaN:
+                    if pv_data_adjusted[i, j] >0:
                         # compute the error as the actual minus the dot
                         # product of the user and item latent features
 
                         diff = (
                                 pv_data_adjusted[i, j] - self.mu.mean() - self.bu[i] - self.bi[j] -
-                                (np.dot(self.item_mat[j, :],(self.user_mat[i:] +
-                                                             np.dot(pv_data_implicit[i], self.yj[:,j]) / sqrtIu) ))
+                                (np.dot(self.item_mat[:, j],(self.user_mat[i,:] +
+                                                             np.dot(pv_data_implicit[i], self.yj[:,j].reshape(-1,1)) / sqrtIu)))
                         )
                         # Keep track of the sum of squared errors for the
                         # matrix
@@ -336,12 +337,12 @@ class SvdPPR(BaseEstimator, RegressorMixin):
                                                    (diff * (self.user_mat[i, k] +
                                                             np.dot(pv_data_implicit[i], self.yj[:,j]) / sqrtIu) -
                                                             self.item_mat[k, j])
-
-                            self.yj[k, j] += self.learning_rate * (diff * self.item_mat[k, j] / sqrtIu - self.yj[k, j])
+                            self.yj[j, k] += self.learning_rate * (diff * self.item_mat[k, j] / sqrtIu - self.yj[j, k])
 
             print(f"\t{iteration+1} \t\t {sse_accum/self.num_ratings} ")
 
-        np.sqrt(np.linalg.norm(pv_data_implicit[i, :]))
+        print(self.yj)
+
         self.predictions = sparse.csr_matrix(self.mu.mean() + self.bu + self.bi.reshape(1,len(self.bi)) +
                                 (np.dot(self.item_mat,(self.user_mat +
                                                              np.dot(pv_data_implicit, self.yj) / np.sqrt(np.linalg.norm(pv_data_implicit, axis=1))))
@@ -504,7 +505,7 @@ if __name__ == "__main__":
     # print(b1.mean(axis=1))
     # print(b1-b1.mean(axis=1))
     svd = SvdR(c_index="userId", c_columns="id")
-    fsvd = FunkSvdR(c_index="userId", c_columns="id")
+    fsvd = SvdPPR(c_index="userId", c_columns="id")
     fsvd.fit(v[:, 0:2], v[:, 2])
 
     print("user_mat")
