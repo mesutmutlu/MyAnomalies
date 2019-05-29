@@ -138,7 +138,7 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
         pv_data.loc[-1] = pv_data.mean(axis=0).values.T
 
         #adjust values to evite the user tendence like high or low rating
-        pv_data_adjusted = pv_data.subtract(pv_data.mean(axis=1), axis=0) + 0.1 #0.1 as regularization factor
+        pv_data_adjusted = pv_data # pv_data.subtract(pv_data.mean(axis=1), axis=0) + 0.1 #0.1 as regularization factor
         #print(pv_data_adjusted)
         pv_data_adjusted = pv_data_adjusted.values
 
@@ -178,7 +178,7 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
                         # compute the error as the actual minus the dot
                         # product of the user and item latent features
                         diff = (
-                                pv_data_adjusted[i, j]
+                                pv_data_adjusted[i, j] - self.mu.mean()
                                 - np.dot(self.user_mat[i, :], self.item_mat[:, j])
                         )
                         # Keep track of the sum of squared errors for the
@@ -235,7 +235,9 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         self.rows = None
         self.columns = None
 
-    def fit(self, x=None, y=None):
+    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=1000, early_stop=0.1,
+            regularization=0.01, randomstate=42):
+        np.random.seed(randomstate)
         if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
             x = x.values
 
@@ -245,7 +247,7 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         if type(y) == list:
             y = np.array(y).reshape(-1,1).ravel()
 
-        if  y.ndim != 1:
+        if y.ndim != 1:
             y = y.ravel()
 
         if x.shape[1] != 2:
@@ -268,19 +270,85 @@ class SvdPPR(BaseEstimator, RegressorMixin):
 
         # add mock values data based on means of each column(ex for items for user/item matrix
         pv_data.loc[-1] = pv_data.mean(axis=0).values.T
-        mu = pv_data.mean(axis=1)
 
         #adjust values to evite the user tendence like high or low rating
-        pv_data_adjusted = pv_data.subtract(mu, axis=0) + 0.1 #0.1 as regularization factor
-        pv_data_adjusted.fillna(0, inplace=True)
+        pv_data_adjusted = pv_data # pv_data.subtract(pv_data.mean(axis=1), axis=0) + 0.1 #0.1 as regularization factor
         #print(pv_data_adjusted)
+        pv_data_adjusted = pv_data_adjusted.values
 
-        #pv_data_adjusted.fillna(0, inplace=True)
-        U, s, Vh = linalg.svd(pv_data_adjusted.values, full_matrices=False)
+        pv_data_implicit = pv_data.ge(0.1).astype(int).values
 
-        self.predictions = sparse.csr_matrix(np.add(np.dot(U, np.dot(np.diag(s), Vh)), mu.values.reshape(-1,1)))
         self.rows = np.append(rows, [-1])
         self.columns = cols
+
+        self.latent_features = latent_features
+        self.learning_rate = learning_rate
+        self.iters = iters
+
+        # Set up some useful values for later
+        self.n_users = len(self.rows)
+        self.n_items = len(self.columns)
+        self.num_ratings = np.count_nonzero(~np.isnan(pv_data))
+
+        self.user_mat = np.random.rand(self.n_users, self.latent_features)
+        self.item_mat = np.random.rand(self.latent_features, self.n_items)
+        self.bu = np.random.rand(self.n_users, 1)
+        self.bi = np.random.rand(self.n_items, 1)
+        self.mu = pv_data.mean().values #by row
+        self.yj = np.random.rand(self.latent_features, self.n_items)
+
+        sse_accum = 0
+
+        print("Iterations \t\t Mean Squared Error ")
+        print(pv_data)
+        for iteration in range(self.iters):
+            old_sse = sse_accum
+            sse_accum = 0
+            #print(iteration, old_sse, self.num_ratings, old_sse/self.num_ratings)
+            if (iteration != 0) & (old_sse/self.num_ratings < 0.1):
+                break
+            for i in range(self.n_users):
+
+                sqrtIu = np.sqrt(np.linalg.norm(pv_data_implicit[i,:]))
+                for j in range(self.n_items):
+
+                    # if the rating exists (so we train only on non-missval)
+                    if pv_data_adjusted[i, j] is not np.NaN:
+                        # compute the error as the actual minus the dot
+                        # product of the user and item latent features
+
+                        diff = (
+                                pv_data_adjusted[i, j] - self.mu.mean() - self.bu[i] - self.bi[j] -
+                                (np.dot(self.item_mat[j, :],(self.user_mat[i:] +
+                                                             np.dot(pv_data_implicit[i], self.yj[:,j]) / sqrtIu) ))
+                        )
+                        # Keep track of the sum of squared errors for the
+                        # matrix
+                        sse_accum += diff ** 2
+                        self.bu[i] += self.learning_rate * (diff - regularization * self.bu[i])
+                        self.bi[j] += self.learning_rate * (diff - regularization * self.bu[j])
+
+                        for k in range(self.latent_features):
+                            self.user_mat[i, k] += self.learning_rate * \
+                                                   (diff * self.item_mat[k, j] - regularization * self.user_mat[i, k])
+
+                            self.item_mat[k, j] += self.learning_rate * \
+                                                   (diff * (self.user_mat[i, k] +
+                                                            np.dot(pv_data_implicit[i], self.yj[:,j]) / sqrtIu) -
+                                                            self.item_mat[k, j])
+
+                            self.yj[k, j] += self.learning_rate * (diff * self.item_mat[k, j] / sqrtIu - self.yj[k, j])
+
+            print(f"\t{iteration+1} \t\t {sse_accum/self.num_ratings} ")
+
+        np.sqrt(np.linalg.norm(pv_data_implicit[i, :]))
+        self.predictions = sparse.csr_matrix(self.mu.mean() + self.bu + self.bi.reshape(1,len(self.bi)) +
+                                (np.dot(self.item_mat,(self.user_mat +
+                                                             np.dot(pv_data_implicit, self.yj) / np.sqrt(np.linalg.norm(pv_data_implicit, axis=1))))
+                                 ))
+        self.rows = np.append(rows, [-1])
+        self.columns = cols
+
 
     def predict(self, x=None):
         if type(x) == pd.DataFrame:
@@ -397,7 +465,14 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    a = np.array(["u4", "i4"])
+
+
+    print(np.zeros(5,np.double))
+    a = np.array([[3, 5, np.NaN],
+                 [4, 5, np.NaN]])
+
+    print(a[0,:][~np.isnan(a[0,:])])
+
 
     v = np.array([["u1", "i2", 2],
                   ["u1", "i3", 3],
@@ -420,6 +495,7 @@ if __name__ == "__main__":
                   ["u7", "i5", 3],
                   ])
 
+    print([_ for (j, _) in v[:,1:3]])
     # print(v[:,0:2])
     # sys.exit()
     data = pd.DataFrame(data=v, columns=["userId", "id", "rating"])
