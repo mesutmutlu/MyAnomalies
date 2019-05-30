@@ -228,14 +228,14 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
 
 class SvdPPR(BaseEstimator, RegressorMixin):
 
-    def __init__(self, c_index=None, c_columns=None, learning_rate=0.001, epocs=100, n_factors=12,
+    def __init__(self, c_index=None, c_columns=None, learning_rate=0.001, n_epocs=100, n_factors=12,
             regularization=0.01, randomstate=42):
         self.pv_index = c_index
         self.pv_columns = c_columns
         self.predictions = None
         self.rows = None
         self.columns = None
-        self.epochs = epocs
+        self.n_epochs = n_epocs
         self.learning_rate = learning_rate
         self.n_factors = n_factors
         self.regularization = regularization
@@ -275,12 +275,12 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         l_facts = ["fact_"+str(i) for i in range(self.n_factors)]
         self.pu = pd.DataFrame(data=np.random.rand(len(self.rows), self.n_factors), index = self.rows, columns=l_facts)
         #print(self.pu.shape)
-        self.qi = pd.DataFrame(data=np.random.rand( len(self.columns), self.n_factors), index = self.columns, columns=l_facts)
+        self.qi = pd.DataFrame(data=np.random.rand(len(self.columns), self.n_factors), index = self.columns, columns=l_facts)
         #print(self.qi.shape)
         self.bu = pd.DataFrame(data=np.random.rand(len(self.rows), 1), index = self.rows, columns=["bu"])
         self.bi = pd.DataFrame(data=np.random.rand(len(self.columns), 1), index = self.columns, columns=["bi"])
         self.mu = pv_data.mean().mean() #gloabal mu
-        self.yj = np.random.rand(len(self.columns), self.n_factors)
+        self.yj = pd.DataFrame(data=np.random.rand(len(self.columns), self.n_factors),index=self.columns, columns=l_facts)
 
         sse_accum = 0
 
@@ -289,32 +289,38 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         m_Iu = pv_data.ge(0.1).astype(int).values
         sqrt_Iu = pd.DataFrame(data=np.sqrt(np.linalg.norm(m_Iu, axis=1)), index=self.rows, columns=["sqrt_Iu"])
         u_impl_fdb = pd.DataFrame(np.dot(m_Iu, self.yj) / sqrt_Iu.values.reshape(-1,1), index=self.rows, columns=l_facts)
+        err=0
+        for current_epoch in range(self.n_epochs):
 
-        print("Iterations \t\t Mean Squared Error ")
-        for u, i, r in pd_data.values:
-            # compute current error
-            print(u, i, r)
-            dot = 0  # <q_i, (p_u + sum_{j in Iu} y_j / sqrt{Iu}>
-            print(self.qi[180:])
-            for f in l_facts:
-                dot += self.qi.loc[i, f] * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f])
+            print("Iteration:", current_epoch, "Mean Squared Error ", err)
+            for u, i, r in pd_data.values:
+                # compute current error
+                print(u, i, r)
+                dot = 0  # <q_i, (p_u + sum_{j in Iu} y_j / sqrt{Iu}>
+                for f in l_facts:
+                    dot += self.qi.loc[i, f] * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f])
+                print("dot", dot)
+                print("-----")
+                print("self.bu.loc[u]", self.bu.loc[u])
+                print("self.bi.loc[i]", self.bi.loc[i])
+                print("plus", self.bu.loc[u,"bu"]+ self.bi.loc[i,"bi"])
+                err = r - (self.mu + self.bu.loc[u,"bu"] + self.bi.loc[i,"bi"] + dot)
 
-            err = r - (self.mu + self.bu.loc[u] + self.bi.loc[i] + dot)
+                # update biases
+                self.bu.loc[u,"bu"] += self.learning_rate * (err - self.bu.loc[u, "bu"])
+                self.bi.loc[i,"bi"] += self.learning_rate * (err - self.bi.loc[i, "bi"])
 
-            # update biases
-            self.bu.loc[u] += self.learning_rate * (err - self.bu.loc[u])
-            self.bi.loc[i] += self.learning_rate * (err - self.bi.loc[i])
-
-            # update factors
-            for f in l_facts:
-                puf = self.pu.loc[u, f]
-                qif = self.qi.loc[i, f]
-
-                self.pu.loc[u, f] += self.learning_rate * (err * self.qi.loc[i, f] - self.pu.loc[u, f])
-                self.qi.loc[i, f] += self.learning_rate * (err * (self.pu.loc[u, f] + u_impl_fdb[u, f]) - self.qi.loc[i, f])
-                for j in Iu:
-                    yj[j, f] += lr_yj * (err * qif / sqrt_Iu[u] -
-                                         reg_yj * yj[j, f])
+                # update factors
+                for f in l_facts:
+                    self.pu.loc[u, f] += self.learning_rate * (err * self.qi.loc[i, f] - self.pu.loc[u, f])
+                    self.qi.loc[i, f] += self.learning_rate * (err * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f]) - self.qi.loc[i, f])
+                    print("self.learning_rate",self.learning_rate)
+                    print("err", err)
+                    print("self.qi.loc[i, f]", self.qi.loc[i, f])
+                    print("sqrt_Iu.loc[u,sqrt_Iu]",sqrt_Iu.loc[u,"sqrt_Iu"])
+                    print("self.yj.loc[:, f]")
+                    print(self.yj.loc[:, f])
+                    self.yj.loc[:, f] += self.learning_rate * (err * self.qi.loc[i, f] / sqrt_Iu.loc[u,"sqrt_Iu"] - self.yj.loc[:, f])
 
         self.bu = bu
         self.bi = bi
