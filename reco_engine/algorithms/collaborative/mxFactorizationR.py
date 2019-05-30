@@ -228,125 +228,99 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
 
 class SvdPPR(BaseEstimator, RegressorMixin):
 
-    def __init__(self, c_index=None, c_columns=None):
+    def __init__(self, c_index=None, c_columns=None, learning_rate=0.001, epocs=100, n_factors=12,
+            regularization=0.01, randomstate=42):
         self.pv_index = c_index
         self.pv_columns = c_columns
         self.predictions = None
         self.rows = None
         self.columns = None
+        self.epochs = epocs
+        self.learning_rate = learning_rate
+        self.n_factors = n_factors
+        self.regularization = regularization
+        self.randomstate = randomstate
 
-    def fit(self, x=None, y=None, latent_features=12, learning_rate=0.001, iters=1000, early_stop=0.1,
-            regularization=0.01, randomstate=42):
-        np.random.seed(randomstate)
+    def fit(self, x=None, y=None,  early_stop=0.1):
+        np.random.seed(self.randomstate)
         if (type(x) == pd.DataFrame) or (type(x) == pd.Series):
             x = x.values
 
         if (type(y) == pd.DataFrame) or (type(y) == pd.Series):
             y = y.values.reshape(-1,1)
 
-        if type(y) == list:
-            y = np.array(y).reshape(-1,1).ravel()
-
-        if y.ndim != 1:
-            y = y.ravel()
-
         if x.shape[1] != 2:
             raise SystemExit("x should have 2 columns, first as values for which the similarity will be calculated")
 
-        if y.ndim != 1:
-            raise SystemExit("y should have 1 column")
+        if y.ndim != 2:
+            raise SystemExit("y should have (n,1) shape")
 
         if len(x) != len(y):
             raise SystemExit("x and y should have same length")
 
-        rows, row_pos = np.unique(x[:, 0], return_inverse=True)
-        cols, col_pos = np.unique(x[:, 1], return_inverse=True)
+        pd_data = pd.DataFrame(data=np.concatenate((x, y), axis=1), columns=[self.pv_index, self.pv_columns, "value"])
 
-        pivot_table = np.zeros((len(rows), len(cols)), dtype=np.float)
-        pivot_table[row_pos, col_pos] = y
+        # add mock values of rows data based on means of each column(ex for items for user/item matrix
+        # for y in pd_data.columns.values.tolist():
+        #     print(pd_data[pd_data[self.pv_columns] == str(y)].mean())
+        #     pd_data.loc[-1,y] = pd_data[pd_data[self.pv_columns]==y].mean()
 
-        pv_data = pd.DataFrame(data=pivot_table, index=rows, columns=cols)
+        #print(pd_data)
+        pv_data = pd_data.pivot_table(index=self.pv_index, columns=self.pv_columns, values="value")
         pv_data.replace(0, np.NaN, inplace=True)
 
-        # add mock values data based on means of each column(ex for items for user/item matrix
-        pv_data.loc[-1] = pv_data.mean(axis=0).values.T
+        self.rows = pv_data.index.values.tolist()
+        self.columns = pv_data.columns.values.tolist()
 
-        #adjust values to evite the user tendence like high or low rating
-        pv_data_adjusted = pv_data # pv_data.subtract(pv_data.mean(axis=1), axis=0) + 0.1 #0.1 as regularization factor
-        #print(pv_data_adjusted)
-        pv_data_adjusted = pv_data_adjusted.values
-
-        pv_data_implicit = pv_data.ge(0.1).astype(int).values
-
-        self.rows = np.append(rows, [-1])
-        self.columns = cols
-
-        self.latent_features = latent_features
-        self.learning_rate = learning_rate
-        self.iters = iters
-
-        # Set up some useful values for later
-        self.n_users = len(self.rows)
-        self.n_items = len(self.columns)
-        self.num_ratings = np.count_nonzero(~np.isnan(pv_data))
-
-        self.user_mat = np.random.rand(self.n_users, self.latent_features)
-        self.item_mat = np.random.rand(self.latent_features, self.n_items)
-        self.bu = np.random.rand(self.n_users, 1)
-        self.bi = np.random.rand(self.n_items, 1)
-        self.mu = pv_data.mean().values #by row
-
-        self.yj = np.random.rand( self.n_items, self.latent_features)
+        l_facts = ["fact_"+str(i) for i in range(self.n_factors)]
+        self.pu = pd.DataFrame(data=np.random.rand(len(self.rows), self.n_factors), index = self.rows, columns=l_facts)
+        #print(self.pu.shape)
+        self.qi = pd.DataFrame(data=np.random.rand( len(self.columns), self.n_factors), index = self.columns, columns=l_facts)
+        #print(self.qi.shape)
+        self.bu = pd.DataFrame(data=np.random.rand(len(self.rows), 1), index = self.rows, columns=["bu"])
+        self.bi = pd.DataFrame(data=np.random.rand(len(self.columns), 1), index = self.columns, columns=["bi"])
+        self.mu = pv_data.mean().mean() #gloabal mu
+        self.yj = np.random.rand(len(self.columns), self.n_factors)
 
         sse_accum = 0
 
+
+        # compute user implicit feedback matrice
+        m_Iu = pv_data.ge(0.1).astype(int).values
+        sqrt_Iu = pd.DataFrame(data=np.sqrt(np.linalg.norm(m_Iu, axis=1)), index=self.rows, columns=["sqrt_Iu"])
+        u_impl_fdb = pd.DataFrame(np.dot(m_Iu, self.yj) / sqrt_Iu.values.reshape(-1,1), index=self.rows, columns=l_facts)
+
         print("Iterations \t\t Mean Squared Error ")
-        print(pv_data)
-        for iteration in range(self.iters):
-            old_sse = sse_accum
-            sse_accum = 0
-            #print(iteration, old_sse, self.num_ratings, old_sse/self.num_ratings)
-            if (iteration != 0) & (old_sse/self.num_ratings < 0.1):
-                break
-            for i in range(self.n_users):
+        for u, i, r in pd_data.values:
+            # compute current error
+            print(u, i, r)
+            dot = 0  # <q_i, (p_u + sum_{j in Iu} y_j / sqrt{Iu}>
+            print(self.qi[180:])
+            for f in l_facts:
+                dot += self.qi.loc[i, f] * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f])
 
-                sqrtIu = np.sqrt(np.linalg.norm(pv_data_implicit[i,:]))
-                for j in range(self.n_items):
+            err = r - (self.mu + self.bu.loc[u] + self.bi.loc[i] + dot)
 
-                    # if the rating exists (so we train only on non-missval)
-                    if pv_data_adjusted[i, j] >0:
-                        # compute the error as the actual minus the dot
-                        # product of the user and item latent features
+            # update biases
+            self.bu.loc[u] += self.learning_rate * (err - self.bu.loc[u])
+            self.bi.loc[i] += self.learning_rate * (err - self.bi.loc[i])
 
-                        diff = (
-                                pv_data_adjusted[i, j] - self.mu.mean() - self.bu[i] - self.bi[j] -
-                                (np.dot(self.item_mat[:, j],(self.user_mat[i,:] +
-                                                             np.dot(pv_data_implicit[i], self.yj[:,j].reshape(-1,1)) / sqrtIu)))
-                        )
-                        # Keep track of the sum of squared errors for the
-                        # matrix
-                        sse_accum += diff ** 2
-                        self.bu[i] += self.learning_rate * (diff - regularization * self.bu[i])
-                        self.bi[j] += self.learning_rate * (diff - regularization * self.bu[j])
+            # update factors
+            for f in l_facts:
+                puf = self.pu.loc[u, f]
+                qif = self.qi.loc[i, f]
 
-                        for k in range(self.latent_features):
-                            self.user_mat[i, k] += self.learning_rate * \
-                                                   (diff * self.item_mat[k, j] - regularization * self.user_mat[i, k])
+                self.pu.loc[u, f] += self.learning_rate * (err * self.qi.loc[i, f] - self.pu.loc[u, f])
+                self.qi.loc[i, f] += self.learning_rate * (err * (self.pu.loc[u, f] + u_impl_fdb[u, f]) - self.qi.loc[i, f])
+                for j in Iu:
+                    yj[j, f] += lr_yj * (err * qif / sqrt_Iu[u] -
+                                         reg_yj * yj[j, f])
 
-                            self.item_mat[k, j] += self.learning_rate * \
-                                                   (diff * (self.user_mat[i, k] +
-                                                            np.dot(pv_data_implicit[i], self.yj[:,j]) / sqrtIu) -
-                                                            self.item_mat[k, j])
-                            self.yj[j, k] += self.learning_rate * (diff * self.item_mat[k, j] / sqrtIu - self.yj[j, k])
-
-            print(f"\t{iteration+1} \t\t {sse_accum/self.num_ratings} ")
-
-        print(self.yj)
-
-        self.predictions = sparse.csr_matrix(self.mu.mean() + self.bu + self.bi.reshape(1,len(self.bi)) +
-                                (np.dot(self.item_mat,(self.user_mat +
-                                                             np.dot(pv_data_implicit, self.yj) / np.sqrt(np.linalg.norm(pv_data_implicit, axis=1))))
-                                 ))
+        self.bu = bu
+        self.bi = bi
+        self.pu = pu
+        self.qi = qi
+        self.yj = yj
         self.rows = np.append(rows, [-1])
         self.columns = cols
 
@@ -466,48 +440,58 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
+    test = 0
+    if test == 1:
+        print(np.zeros(5,np.double))
+        a = np.array([[3, 5],
+                     [4, 5]])
+        n = np.array([4,5,6,7,8]).reshape(5,1)
+        d = np.array([[1],[2], [2], [5], [10]])
+        print(n/d)
+        print(np.sum(a, axis=1))
+
+        print(a[0,:][~np.isnan(a[0,:])])
 
 
-    print(np.zeros(5,np.double))
-    a = np.array([[3, 5, np.NaN],
-                 [4, 5, np.NaN]])
+        v = np.array([["u1", "i2", 2],
+                      ["u1", "i3", 3],
+                      ["u2", "i2", 3],
+                      ["u2", "i3", 3],
+                      ["u2", "i4", 1],
+                      ["u2", "i5", 4],
+                      ["u2", "i6", 4],
+                      ["u3", "i3", 5],
+                      ["u3", "i4", 3],
+                      ["u3", "i5", 3],
+                      ["u4", "i2", 5],
+                      ["u4", "i4", 5],
+                      ["u5", "i1", 2.5],
+                      ["u5", "i2", 4],
+                      ["u5", "i3", 2],
+                      ["u5", "i6", 4],
+                      ["u6", "i4", 2],
+                      ["u7", "i2", 1],
+                      ["u7", "i5", 3],
+                      ])
 
-    print(a[0,:][~np.isnan(a[0,:])])
+        print([_ for (j, _) in v[:,1:3]])
+        # print(v[:,0:2])
+        # sys.exit()
+        v = pd.DataFrame(data=v, columns=["userId", "id", "rating"]).values
+        # b1 = pd.DataFrame(data = [[1,2],[1,10]])
+        # print(b1)
+        # print(b1.mean(axis=1))
+        # print(b1-b1.mean(axis=1))
+        svd = SvdR(c_index="userId", c_columns="id")
+        fsvd = SvdPPR(c_index="userId", c_columns="id")
+        #fsvd.fit(v[:, 0:2], v[:, 2])
+    ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\prep_ratings.csv')
+    print(ratings.head())
+    #for x,y,z in ratings[["userId","id","rating"]].values:
+    #    print(x,y,z)
 
-
-    v = np.array([["u1", "i2", 2],
-                  ["u1", "i3", 3],
-                  ["u2", "i2", 3],
-                  ["u2", "i3", 3],
-                  ["u2", "i4", 1],
-                  ["u2", "i5", 4],
-                  ["u2", "i6", 4],
-                  ["u3", "i3", 5],
-                  ["u3", "i4", 3],
-                  ["u3", "i5", 3],
-                  ["u4", "i2", 5],
-                  ["u4", "i4", 5],
-                  ["u5", "i1", 2.5],
-                  ["u5", "i2", 4],
-                  ["u5", "i3", 2],
-                  ["u5", "i6", 4],
-                  ["u6", "i4", 2],
-                  ["u7", "i2", 1],
-                  ["u7", "i5", 3],
-                  ])
-
-    print([_ for (j, _) in v[:,1:3]])
-    # print(v[:,0:2])
-    # sys.exit()
-    data = pd.DataFrame(data=v, columns=["userId", "id", "rating"])
-    # b1 = pd.DataFrame(data = [[1,2],[1,10]])
-    # print(b1)
-    # print(b1.mean(axis=1))
-    # print(b1-b1.mean(axis=1))
-    svd = SvdR(c_index="userId", c_columns="id")
     fsvd = SvdPPR(c_index="userId", c_columns="id")
-    fsvd.fit(v[:, 0:2], v[:, 2])
-
+    fsvd.fit(ratings[["userId","id"]], ratings["rating"])
     print("user_mat")
     print(fsvd.user_mat)
     print("item_mat")
