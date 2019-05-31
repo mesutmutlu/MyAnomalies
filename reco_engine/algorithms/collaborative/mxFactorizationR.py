@@ -9,6 +9,7 @@ from scipy.spatial.distance import cosine
 from scipy import linalg
 import pandas as pd
 from scipy.misc import derivative
+from enum import Enum
 
 class SvdR(BaseEstimator, RegressorMixin):
 
@@ -228,7 +229,7 @@ class FunkSvdR(BaseEstimator, RegressorMixin):
 
 class SvdPPR(BaseEstimator, RegressorMixin):
 
-    def __init__(self, c_index=None, c_columns=None, learning_rate=0.001, n_epocs=100, n_factors=12,
+    def __init__(self, c_index=None, c_columns=None, lr=0.001, n_epocs=100, n_factors=12,
             regularization=0.01, randomstate=42):
         self.pv_index = c_index
         self.pv_columns = c_columns
@@ -236,7 +237,7 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         self.rows = None
         self.columns = None
         self.n_epochs = n_epocs
-        self.learning_rate = learning_rate
+        self.lr = lr
         self.n_factors = n_factors
         self.regularization = regularization
         self.randomstate = randomstate
@@ -249,6 +250,9 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         if (type(y) == pd.DataFrame) or (type(y) == pd.Series):
             y = y.values.reshape(-1,1)
 
+        if y.ndim == 1:
+            y = y.reshape(-1,1)
+
         if x.shape[1] != 2:
             raise SystemExit("x should have 2 columns, first as values for which the similarity will be calculated")
 
@@ -258,78 +262,95 @@ class SvdPPR(BaseEstimator, RegressorMixin):
         if len(x) != len(y):
             raise SystemExit("x and y should have same length")
 
-        pd_data = pd.DataFrame(data=np.concatenate((x, y), axis=1), columns=[self.pv_index, self.pv_columns, "value"])
+        enum_u = enumerate(np.unique(x[:,0]),0)
+        enum_i = enumerate(np.unique(x[:,1]),0)
 
-        # add mock values of rows data based on means of each column(ex for items for user/item matrix
-        # for y in pd_data.columns.values.tolist():
-        #     print(pd_data[pd_data[self.pv_columns] == str(y)].mean())
-        #     pd_data.loc[-1,y] = pd_data[pd_data[self.pv_columns]==y].mean()
+        for u, value in enum_u:
+            x[x[:,0] == value, 0] = u
+        for i, value in enum_i:
+            x[x[:,1] == value, 1] = i
 
-        #print(pd_data)
-        pv_data = pd_data.pivot_table(index=self.pv_index, columns=self.pv_columns, values="value")
-        pv_data.replace(0, np.NaN, inplace=True)
+        data = np.concatenate((x, y), axis=1)
 
-        self.rows = pv_data.index.values.tolist()
-        self.columns = pv_data.columns.values.tolist()
+        self.rows = np.unique(x[:,0])
+        l_rows = len(self.rows)
+        self.columns = np.unique(x[:,1])
+        l_columns = len(self.columns)
 
-        l_facts = ["fact_"+str(i) for i in range(self.n_factors)]
-        self.pu = pd.DataFrame(data=np.random.rand(len(self.rows), self.n_factors), index = self.rows, columns=l_facts)
-        #print(self.pu.shape)
-        self.qi = pd.DataFrame(data=np.random.rand(len(self.columns), self.n_factors), index = self.columns, columns=l_facts)
-        #print(self.qi.shape)
-        self.bu = pd.DataFrame(data=np.random.rand(len(self.rows), 1), index = self.rows, columns=["bu"])
-        self.bi = pd.DataFrame(data=np.random.rand(len(self.columns), 1), index = self.columns, columns=["bi"])
-        self.mu = pv_data.mean().mean() #gloabal mu
-        self.yj = pd.DataFrame(data=np.random.rand(len(self.columns), self.n_factors),index=self.columns, columns=l_facts)
+        self.pu = np.random.rand(l_rows, l_columns)
+        print("self.pu.shape", self.pu.shape)
+        print(self.pu)
+        self.qi = np.random.rand(l_columns, self.n_factors)
+        print("self.qi.shape", self.qi.shape)
+        print(self.qi)
+        self.bu = np.zeros(l_rows, np.double)
+        print("self.bu.shape", self.bu.shape)
+        print(self.bu)
+        self.bi = np.zeros(l_columns, np.double)
+        print("self.bi.shape", self.bi.shape)
+        print(self.bi)
+        print(y)
+        self.global_mean = y.mean()#gloabal mu
+        self.yj = np.random.rand(l_columns, self.n_factors)
+        print("self.yj.shape", self.yj.shape)
+        print(self.yj)
 
         sse_accum = 0
 
-
+        m_Iu = data.copy()
         # compute user implicit feedback matrice
-        m_Iu = pv_data.ge(0.1).astype(int).values
-        sqrt_Iu = pd.DataFrame(data=np.sqrt(np.linalg.norm(m_Iu, axis=1)), index=self.rows, columns=["sqrt_Iu"])
-        u_impl_fdb = pd.DataFrame(np.dot(m_Iu, self.yj) / sqrt_Iu.values.reshape(-1,1), index=self.rows, columns=l_facts)
+        m_Iu[:,2] = np.greater(data[:,2], 0.1).astype(int)
+        #m_Iu = sparse.csr_matrix(m_Iu)
+        # print(m_Iu)
+        # sqrt_Iu = pd.DataFrame(data=np.sqrt(np.linalg.norm(m_Iu, axis=1)), index=self.rows, columns=["sqrt_Iu"])
+        # u_impl_fdb = pd.DataFrame(np.dot(m_Iu, self.yj) / sqrt_Iu.values.reshape(-1,1), index=self.rows, columns=l_facts)
         err=0
+        dt1 = np.dtype('str')
+        sqrt_Iu = np.empty(l_rows, np.double)
+        pv_data = pd.DataFrame(data=data, columns=["u", "i", "value"]).\
+                        pivot(index="u", columns="i", values="value")
+        sqrt_Iu = pv_data.count(axis=1).apply(lambda x: np.sqrt(x)).values
+        print("sqrt_Iu", sqrt_Iu.shape)
+        print(sqrt_Iu)
+        sum_yj = np.dot(pv_data.ge(0.1).astype(int).values, self.yj)
+        print("sqrt_Iu", sqrt_Iu.shape)
+        print(sqrt_Iu)
+        u_impdl_fdb = np.concatenate((sqrt_Iu.reshape(-1,1),(sum_yj/sqrt_Iu.reshape(-1,1))), axis=1)
+        print("u_impdl_fdb", u_impdl_fdb.shape)
+        print(u_impdl_fdb)
+
         for current_epoch in range(self.n_epochs):
 
+
             print("Iteration:", current_epoch, "Mean Squared Error ", err)
-            for u, i, r in pd_data.values:
+            for u, i, r in data:
+
                 # compute current error
-                print(u, i, r)
                 dot = 0  # <q_i, (p_u + sum_{j in Iu} y_j / sqrt{Iu}>
-                for f in l_facts:
-                    dot += self.qi.loc[i, f] * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f])
-                print("dot", dot)
-                print("-----")
-                print("self.bu.loc[u]", self.bu.loc[u])
-                print("self.bi.loc[i]", self.bi.loc[i])
-                print("plus", self.bu.loc[u,"bu"]+ self.bi.loc[i,"bi"])
-                err = r - (self.mu + self.bu.loc[u,"bu"] + self.bi.loc[i,"bi"] + dot)
+                for f in range(self.n_factors):
+                    print("u, i, f", u, i, f)
+                    print("qi[i, f]", self.qi[i, f])
+                    print("pu[u, f]", self.pu[u, f])
+                    print("u_impdl_fdb[u,f]", u_impdl_fdb[u,f])
+                    dot += self.qi[i, f] * (self.pu[u, f] + u_impdl_fdb[u,f])
+
+                err = r - (self.global_mean + self.bu[u] + self.bi[i] + dot)
 
                 # update biases
-                self.bu.loc[u,"bu"] += self.learning_rate * (err - self.bu.loc[u, "bu"])
-                self.bi.loc[i,"bi"] += self.learning_rate * (err - self.bi.loc[i, "bi"])
+                self.bu[u] += self.lr * (err - self.bu[u])
+                self.bi[i] += self.lr * (err - self.bi[i])
 
                 # update factors
-                for f in l_facts:
-                    self.pu.loc[u, f] += self.learning_rate * (err * self.qi.loc[i, f] - self.pu.loc[u, f])
-                    self.qi.loc[i, f] += self.learning_rate * (err * (self.pu.loc[u, f] + u_impl_fdb.loc[u, f]) - self.qi.loc[i, f])
-                    print("self.learning_rate",self.learning_rate)
-                    print("err", err)
-                    print("self.qi.loc[i, f]", self.qi.loc[i, f])
-                    print("sqrt_Iu.loc[u,sqrt_Iu]",sqrt_Iu.loc[u,"sqrt_Iu"])
-                    print("self.yj.loc[:, f]")
-                    print(self.yj.loc[:, f])
-                    self.yj.loc[:, f] += self.learning_rate * (err * self.qi.loc[i, f] / sqrt_Iu.loc[u,"sqrt_Iu"] - self.yj.loc[:, f])
-
-        self.bu = bu
-        self.bi = bi
-        self.pu = pu
-        self.qi = qi
-        self.yj = yj
-        self.rows = np.append(rows, [-1])
-        self.columns = cols
-
+                for f in range(self.n_factors):
+                    puf = self.pu[u, f]
+                    qif = self.qi[i, f]
+                    self.pu[u, f] += self.lr * (err * qif -  puf)
+                    self.qi[i, f] += self.lr * (err * (puf + u_impdl_fdb[u, f]) -
+                                         qif)
+                    print("yj", self.yj)
+                    for j in Iu:
+                        self.yj[j, f] += self.lr * (err * qif / sqrt_Iu[u] -
+                                              self.yj[j, f])
 
     def predict(self, x=None):
         if type(x) == pd.DataFrame:
@@ -446,7 +467,7 @@ if __name__ == "__main__":
     sys.stdout.buffer.write(chr(9986).encode('utf8'))
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    test = 0
+    test = 1
     if test == 1:
         print(np.zeros(5,np.double))
         a = np.array([[3, 5],
@@ -490,14 +511,15 @@ if __name__ == "__main__":
         # print(b1-b1.mean(axis=1))
         svd = SvdR(c_index="userId", c_columns="id")
         fsvd = SvdPPR(c_index="userId", c_columns="id")
-        #fsvd.fit(v[:, 0:2], v[:, 2])
+        fsvd.fit(v[:, 0:2], v[:, 2].astype(float))
     ratings = pd.read_csv(r'C:\datasets\the-movies-dataset\prep_ratings.csv')
     print(ratings.head())
     #for x,y,z in ratings[["userId","id","rating"]].values:
     #    print(x,y,z)
-
+    sys.exit()
     fsvd = SvdPPR(c_index="userId", c_columns="id")
     fsvd.fit(ratings[["userId","id"]], ratings["rating"])
+    fsvd.fit(v[:, 0:2], v[:, 2].astype(float))
     print("user_mat")
     print(fsvd.user_mat)
     print("item_mat")
