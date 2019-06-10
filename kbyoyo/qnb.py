@@ -20,7 +20,7 @@ pd_ts_agent = pd.read_csv(r"C:\datasets\kbyoyo\qnb\Koc_Yaz_Okulu_Data_Test_Agent
 
 # print(pd_tr_cust.head())
 # print(pd_tr_agent.head())
-print(pd_tr_target.head())
+# print(pd_tr_target.head())
 # print(pd_ts_cust.head())
 # print(pd_ts_agent.head())
 
@@ -38,10 +38,15 @@ x_test["SPEECH"] = x_test["CUST_TXT"] + " " + x_test["AGENT_TXT"]
 #print(x_test)
 
 train, val = train_test_split(x_train, random_state=42, test_size=0.33, shuffle=True)
-X_train = train["SPEECH"]
+X_train = train["SPEECH"].values
 Y_train = train.drop("SPEECH", axis=1).values.tolist()
-X_val = val["SPEECH"]
+X_val = val["SPEECH"].values
 Y_val = val.drop("SPEECH", axis=1).values.tolist()
+
+print("------X_train------")
+print(X_train[:5])
+print("------Y_train------")
+print(Y_train[:5])
 
 vectorizer = TfidfVectorizer(ngram_range=(2,5), analyzer="word")
 X_train = vectorizer.fit_transform(X_train)
