@@ -50,6 +50,8 @@ svd.fit(X_train)
 print("explained_variance_ratio_.sum() ", str(svd.explained_variance_ratio_.sum()))
 #print(svd.explained_variance_ratio_)
 X_train = svd.transform(X_train)
+print(X_train)
+print(Y_train)
 
 
 
