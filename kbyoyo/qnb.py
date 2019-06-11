@@ -40,9 +40,15 @@ def print_score(y_pred, y_true, clf):
     print("Hamming score: {}".format(hamming_score(y_pred, y_true)))
     print("Accuracy score: {}".format(accuracy_score(y_pred, y_true)))
     if y_pred.shape[1] > 1:
-        print("Precision score: {}".format(precision_score(y_pred, y_true, average="weighted")))
-        print("Recall score: {}".format(recall_score(y_pred, y_true, average="weighted")))
-        print("F1 score: {}".format(f1_score(y_pred, y_true, average="weighted")))
+        print("Weighted Precision score: {}".format(precision_score(y_pred, y_true, average="weighted")))
+        print("Weighted Recall score: {}".format(recall_score(y_pred, y_true, average="weighted")))
+        print("Weighted F1 score: {}".format(f1_score(y_pred, y_true, average="weighted")))
+        print("Micro Precision score: {}".format(precision_score(y_pred, y_true, average="micro")))
+        print("Micro Recall score: {}".format(recall_score(y_pred, y_true, average="micro")))
+        print("Micro F1 score: {}".format(f1_score(y_pred, y_true, average="micro")))
+        print("Macro Precision score: {}".format(precision_score(y_pred, y_true, average="macro")))
+        print("Macro Recall score: {}".format(recall_score(y_pred, y_true, average="macro")))
+        print("Macro F1 score: {}".format(f1_score(y_pred, y_true, average="macro")))
     else:
         print("Precision score: {}".format(precision_score(y_pred, y_true)))
         print("Recall score: {}".format(recall_score(y_pred, y_true)))
@@ -110,7 +116,7 @@ for classifier in l_clf:
     for category in labels:
         print(datetime.now(), classifier.__class__.__name__,'... Processing {}'.format(category))
         # train the model using X_dtm & y
-        classifier.fit(x_train, np.array(y_train).loc[:,i])
+        classifier.fit(x_train, np.array(y_train)[:,i])
         # compute the testing scores
         y_pred = classifier.predict(x_test)
         print_score(y_pred, np.array(y_test), classifier)
