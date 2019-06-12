@@ -34,26 +34,63 @@ def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
         acc_list.append(tmp_a)
     return np.mean(acc_list)
 
-def print_score(y_pred, y_true, clf):
-    #print("Clf: ", clf.__class__.__name__)
-    print("Hamming loss: {}".format(hamming_loss(y_pred, y_true)))
-    print("Hamming score: {}".format(hamming_score(y_pred, y_true)))
-    print("Accuracy score: {}".format(accuracy_score(y_pred, y_true)))
-    if y_pred.shape[1] > 1:
-        print("Weighted Precision score: {}".format(precision_score(y_pred, y_true, average="weighted")))
-        print("Weighted Recall score: {}".format(recall_score(y_pred, y_true, average="weighted")))
-        print("Weighted F1 score: {}".format(f1_score(y_pred, y_true, average="weighted")))
-        print("Micro Precision score: {}".format(precision_score(y_pred, y_true, average="micro")))
-        print("Micro Recall score: {}".format(recall_score(y_pred, y_true, average="micro")))
-        print("Micro F1 score: {}".format(f1_score(y_pred, y_true, average="micro")))
-        print("Macro Precision score: {}".format(precision_score(y_pred, y_true, average="macro")))
-        print("Macro Recall score: {}".format(recall_score(y_pred, y_true, average="macro")))
-        print("Macro F1 score: {}".format(f1_score(y_pred, y_true, average="macro")))
+def calc_score(y_pred, y_true):
+    #print(y_pred.ndim, y_true.ndim)
+    h_loss = 0
+    h_score = 0
+    a_score = 0
+    w_p_score = 0
+    w_r_score = 0
+    w_f1_score = 0
+    mi_p_score = 0
+    mi_r_score = 0
+    mi_f1_score = 0
+    ma_p_score = 0
+    ma_r_score = 0
+    ma_f1_score = 0
+    p_score = 0
+    r_score = 0
+    f1_score_ = 0
+    h_loss =  hamming_loss(y_pred, y_true)
+    h_score = hamming_score(y_pred, y_true)
+    a_score = accuracy_score(y_pred, y_true)
+    if y_pred.ndim == 2:
+        w_p_score = precision_score(y_pred, y_true, average="weighted")
+        w_r_score = recall_score(y_pred, y_true, average="weighted")
+        w_f1_score = f1_score(y_pred, y_true, average="weighted")
+        mi_p_score = precision_score(y_pred, y_true, average="micro")
+        mi_r_score = recall_score(y_pred, y_true, average="micro")
+        mi_f1_score = f1_score(y_pred, y_true, average="micro")
+        ma_p_score = precision_score(y_pred, y_true, average="macro")
+        ma_r_score = recall_score(y_pred, y_true, average="macro")
+        ma_f1_score = f1_score(y_pred, y_true, average="macro")
+    elif y_pred.ndim == 1:
+        p_score = precision_score(y_pred, y_true)
+        r_score = recall_score(y_pred, y_true)
+        f1_score_ = f1_score(y_pred, y_true)
+    return h_loss, h_score,  a_score, w_p_score, w_r_score, w_f1_score, mi_p_score, mi_r_score, mi_f1_score, ma_p_score, \
+           ma_r_score, ma_f1_score, p_score, r_score, f1_score_
+def print_score(h_loss, h_score, a_score, w_p_score, w_r_score, w_f1_score, mi_p_score, mi_r_score, mi_f1_score, ma_p_score,
+                ma_r_score, ma_f1_score, p_score, r_score, f1_score_):
+    print("Hamming loss: {}".format(h_loss))
+    print("Hamming score: {}".format(h_score))
+    print("Accuracy score: {}".format(a_score))
+    if y_pred.ndim == 2:
+        print("Weighted Precision score: {}".format(w_p_score))
+        print("Weighted Recall score: {}".format(w_r_score))
+        print("Weighted F1 score: {}".format(w_f1_score))
+        print("Micro Precision score: {}".format(mi_p_score))
+        print("Micro Recall score: {}".format(mi_r_score))
+        print("Micro F1 score: {}".format(mi_f1_score))
+        print("Macro Precision score: {}".format(ma_p_score))
+        print("Macro Recall score: {}".format(ma_r_score))
+        print("Macro F1 score: {}".format(ma_f1_score))
+    elif y_pred.ndim == 1:
+        print("Precision score: {}".format(p_score))
+        print("Recall score: {}".format(r_score))
+        print("F1 score: {}".format(f1_score_))
     else:
-        print("Precision score: {}".format(precision_score(y_pred, y_true)))
-        print("Recall score: {}".format(recall_score(y_pred, y_true)))
-        print("F1 score: {}".format(f1_score(y_pred, y_true)))
-    print("---")
+        raise AssertionError("Prediction dimension is bigger than2 or smaller than 1")
 
 pd_tr_cust = pd.read_csv(r"C:\datasets\kbyoyo\qnb\Koc_Yaz_Okulu_Data_Train_Cust.txt", delimiter=";")
 pd_tr_agent = pd.read_csv(r"C:\datasets\kbyoyo\qnb\Koc_Yaz_Okulu_Data_Train_Agent.txt", delimiter=";")
@@ -108,16 +145,55 @@ for classifier in l_clf:
     clf = OneVsRestClassifier(classifier)
     clf.fit(x_train, np.array(y_train))
     y_pred = clf.predict(x_test)
-    print_score(y_pred, np.array(y_test), classifier)
+    args = calc_score(y_pred, np.array(y_test))
+    print_score(*args)
 
 
 for classifier in l_clf:
+    print(datetime.now(), classifier.__class__.__name__, "single label")
     i = 0
+    h_loss = 0
+    h_score = 0
+    a_score = 0
+    w_p_score = 0
+    w_r_score = 0
+    w_f1_score = 0
+    mi_p_score = 0
+    mi_r_score = 0
+    mi_f1_score = 0
+    ma_p_score = 0
+    ma_r_score = 0
+    ma_f1_score = 0
+    p_score = 0
+    r_score = 0
+    f1_score_ = 0
+    n_labels = len(labels)
     for category in labels:
-        print(datetime.now(), classifier.__class__.__name__,'... Processing {}'.format(category))
+        #print(datetime.now(), classifier.__class__.__name__,'... Processing {}'.format(category))
         # train the model using X_dtm & y
         classifier.fit(x_train, np.array(y_train)[:,i])
         # compute the testing scores
         y_pred = classifier.predict(x_test)
-        print_score(y_pred, np.array(y_test), classifier)
+        t_h_loss, t_h_score, t_a_score, t_w_p_score, t_w_r_score, t_w_f1_score, t_mi_p_score, t_mi_r_score, t_mi_f1_score, \
+        t_ma_p_score, t_ma_r_score, t_ma_f1_score, t_p_score, t_r_score, t_f1_score_ = calc_score(y_pred, np.array(y_test)[:,i])
+        h_loss += t_h_loss/n_labels
+        h_score += t_h_score/n_labels
+        a_score += t_a_score/n_labels
+        w_p_score += t_w_p_score/n_labels
+        w_r_score += t_w_r_score/n_labels
+        w_f1_score += t_w_f1_score/n_labels
+        mi_p_score += t_mi_p_score/n_labels
+        mi_r_score += t_mi_r_score/n_labels
+        mi_f1_score += t_mi_f1_score/n_labels
+        ma_p_score += t_ma_p_score/n_labels
+        ma_r_score += t_ma_r_score/n_labels
+        ma_f1_score += t_ma_f1_score/n_labels
+        p_score += t_p_score/n_labels
+        r_score += t_r_score/n_labels
+        f1_score_ += t_f1_score_/n_labels
         i += 1
+        #print(i, n_labels)
+        if i == n_labels:
+            args = h_loss, h_score,  a_score, w_p_score, w_r_score, w_f1_score, mi_p_score, mi_r_score, mi_f1_score, ma_p_score, \
+           ma_r_score, ma_f1_score, p_score, r_score, f1_score_
+            print_score(*args)
