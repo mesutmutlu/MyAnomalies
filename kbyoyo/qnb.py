@@ -16,6 +16,9 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import hamming_loss, accuracy_score, precision_score, f1_score, recall_score
 from datetime import datetime
 
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
     '''
@@ -132,10 +135,9 @@ x_train, x_test, y_train, y_test = train_test_split(X_train, Y_train, random_sta
 assert(np.array(y_train).shape[1] == len(labels))
 
 
-#nb_clf = MultinomialNB()
 sgd = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, random_state=42, max_iter=1000, tol=0.001)
 lr = LogisticRegression(solver='lbfgs')
-#mn = MultinomialNB()
+mn = MultinomialNB()
 svc = LinearSVC()
 
 l_clf = [lr, svc, sgd]
@@ -149,8 +151,8 @@ for classifier in l_clf:
     print_score(*args)
 
 
-for classifier in l_clf:
-    print(datetime.now(), classifier.__class__.__name__, "single label")
+for classifier in l_clf + [mn]:
+    print(datetime.now(), classifier.__class__.__name__, "single-label")
     i = 0
     h_loss = 0
     h_score = 0
