@@ -16,10 +16,14 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import hamming_loss, accuracy_score, precision_score, f1_score, recall_score
 from datetime import datetime
 import scipy as sp
-import lightgbm as lgb
-
+from lightgbm import LGBMClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import RandomizedSearchCV
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings("always")
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
@@ -85,7 +89,8 @@ X_val = val["SPEECH"].values
 
 vectorizer = TfidfVectorizer( analyzer="word")
 X_train = vectorizer.fit_transform(X_train)
-svd = TruncatedSVD(n_components=120, random_state=1337)
+n_comp = 70
+svd = TruncatedSVD(n_components=n_comp, random_state=1337)
 svd.fit(X_train)
 print("explained_variance_ratio_.sum() ", str(svd.explained_variance_ratio_.sum()))
 #print(svd.explained_variance_ratio_)
@@ -95,42 +100,88 @@ x_train, x_test, y_train, y_test = train_test_split(X_train, Y_train, random_sta
 
 assert(np.array(y_train).shape[1] == len(labels))
 
+pd_test_scores = pd.DataFrame(columns=["clf", "precision", "recall", "f1"])
 
-sgd = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, random_state=42, max_iter=1000, tol=0.001)
-lr = LogisticRegression(solver='lbfgs')
-mn = MultinomialNB()
-svc = LinearSVC()
-
-l_clf = [lr, svc, sgd]
-
-
-classifiers = [
-        (SGDClassifier(), {"n_estimators": sp.stats.randint(25, 100),
-                                 'learning_rate': sp.stats.uniform(0.0001, 1)}),
-        (lgb.LGBMClassifier(), {'num_leaves': sp.stats.randint(25, 330),
-                            'n_estimators': sp.stats.randint(25, 150),
-                            # 'bagging_fraction': sp.stats.uniform(0.4, 0.9),
-                            'learning_rate': sp.stats.uniform(0.001, 0.5),
+l_ovr_clf = [
+        (SGDClassifier(), {"estimator__learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
+                           "estimator__eta0":sp.stats.uniform(0.001, 0.5),
+                           "estimator__early_stopping":[True],
+                           "estimator__loss":["hinge","log","squared_hinge", "perceptron"],
+                           "estimator__penalty":["l2", "l1", "elasticnet"],
+                           "estimator__alpha":sp.stats.uniform(0.00001, 0.001),
+                           "estimator__n_jobs":[1],
+                           "estimator__max_iter":sp.stats.randint(500, 2000),
+                           "estimator__tol":sp.stats.uniform(0.0001, 0.01)}),
+        (LGBMClassifier(), {'estimator__num_leaves': sp.stats.randint(25, 330),
+                            'estimator__n_estimators': sp.stats.randint(25, 150),
+                            #'estimator__bagging_fraction': sp.stats.uniform(0.4, 0.9),
+                            'estimator__learning_rate': sp.stats.uniform(0.001, 0.5),
                             # 'min_data': sp.stats.randint(50,700),
-                            # 'is_unbalance': [True, False],
+                            'estimator__is_unbalance': [True],
                             # 'max_bin': sp.stats.randint(3,25),
-                            'boosting_type': ['gbdt', 'dart'],
+                            'estimator__boosting_type': ['gbdt', 'dart'],
                             # 'bagging_freq': sp.stats.randint(3,35),
-                            'max_depth': sp.stats.randint(3, 30),
-                            'min_split_gain': sp.stats.uniform(0.001, 0.5),
-                            'objective': 'multiclass'})
+                            'estimator__max_depth': sp.stats.randint(3, 30),
+                            'estimator__min_split_gain': sp.stats.uniform(0.001, 0.5),
+                            #'estimator__objective': 'binary',
+                            "estimator__n_jobs": [1]}),
+        (LogisticRegression(), {"estimator__penalty":["l2", "l1", "elasticnet"],
+                                "estimator__C":sp.stats.randint(1, 10),
+                                "estimator__solver": ["lbfgs", "liblinear", "sag", "saga"],
+                                "estimator__n_jobs": [1]}),
+        (LinearSVC(),{"estimator__penalty":["l2", "l1"],
+                      "estimator__C": sp.stats.randint(1, 10)})
         ]
 
-if 1 == 1:
-    for classifier in l_clf:
-        print(datetime.now(), classifier.__class__.__name__, "multi-label")
-        clf = OneVsRestClassifier(classifier)
-        clf.fit(x_train, np.array(y_train))
-        y_pred = clf.predict(x_test)
-        args = calc_score(y_pred, np.array(y_test))
-        print_score(*args)
+dct = DecisionTreeClassifier()
+knc = KNeighborsClassifier()
+rfc = RandomForestClassifier()
+mlp = MLPClassifier()
 
+l_clf = [
+        (DecisionTreeClassifier(), {"max_depth": sp.stats.randint(n_comp/4, n_comp*2/3),
+                                 'min_samples_split': sp.stats.randint(20, 300),
+                                  "min_samples_leaf": sp.stats.randint(2, 150)
+                                    }),
+        (KNeighborsClassifier(), {'n_neighbors': sp.stats.randint(3, 100),
+                            'algorithm': ["auto","ball_tree","kd_tree","brute"],
+                            'leaf_size': sp.stats.uniform(10, 100)}),
+            (RandomForestClassifier(), {"n_estimators":sp.stats.randint(10, 50),
+                                 "max_depth": sp.stats.randint(n_comp/4, n_comp*2/3),
+                                 'min_samples_split': sp.stats.randint(20, 300),
+                                  "min_samples_leaf": sp.stats.randint(2, 150)})
+
+        ]
+
+
+
+if 1 == 0:
+    for clf in l_ovr_clf:
+        print(datetime.now(), clf[0].__class__.__name__, "multi-label")
+        random_search = RandomizedSearchCV(OneVsRestClassifier(clf[0]), param_distributions=clf[1], verbose=0,cv=5, n_iter=2, scoring="f1_weighted", n_jobs=3)
+
+        # clf = OneVsRestClassifier(clf)
+        #         # clf.fit(x_train, np.array(y_train))
+        random_search.fit(x_train, np.array(y_train))
+        print(random_search.cv_results_)
+        y_pred = random_search.predict(x_test)
+        args = calc_score(y_pred, np.array(y_test))
+        pd_test_scores.append(pd.DataFrame(data=[clf[0].__class__.__name__, args[0], args[1], args[2]]))
+        #print_score(*args)
 if 1 == 1:
+    for clf in l_clf:
+        print(datetime.now(), clf[0].__class__.__name__, "multi-label")
+        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], verbose=0, cv=5,
+                                           n_iter=2, scoring="f1_weighted", n_jobs=3)
+        random_search.fit(x_train, np.array(y_train))
+        print(random_search.cv_results_)
+        y_pred = random_search.predict(x_test)
+        args = calc_score(y_pred, np.array(y_test))
+        pd_test_scores.append(pd.DataFrame(data=[clf[0].__class__.__name__, args[0], args[1], args[2]]))
+        #print_score(*args)
+
+print(pd_test_scores)
+if 1 == 0:
     for classifier in l_clf :
         print(datetime.now(), classifier.__class__.__name__, "single-label")
         i = 0
