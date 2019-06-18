@@ -23,7 +23,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import RandomizedSearchCV
 import warnings
-warnings.filterwarnings("always")
+warnings.filterwarnings("once")
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
@@ -125,7 +125,7 @@ l_ovr_clf = [
                             'estimator__min_split_gain': sp.stats.uniform(0.001, 0.5),
                             #'estimator__objective': 'binary',
                             "estimator__n_jobs": [1]}),
-        (LogisticRegression(), {"estimator__penalty":["l2", "l1", "elasticnet"],
+        (LogisticRegression(), {"estimator__penalty":["l2", "l1"],
                                 "estimator__C":sp.stats.randint(1, 10),
                                 "estimator__solver": ["lbfgs", "liblinear", "sag", "saga"],
                                 "estimator__n_jobs": [1]}),
@@ -155,7 +155,7 @@ l_clf = [
 
 
 
-if 1 == 0:
+if 1 == 1:
     for clf in l_ovr_clf:
         print(datetime.now(), clf[0].__class__.__name__, "multi-label")
         random_search = RandomizedSearchCV(OneVsRestClassifier(clf[0]), param_distributions=clf[1], verbose=0,cv=5, n_iter=2, scoring="f1_weighted", n_jobs=3)
@@ -166,7 +166,10 @@ if 1 == 0:
         print(random_search.cv_results_)
         y_pred = random_search.predict(x_test)
         args = calc_score(y_pred, np.array(y_test))
-        pd_test_scores.append(pd.DataFrame(data=[clf[0].__class__.__name__, args[0], args[1], args[2]]))
+        pd_test_scores = pd_test_scores.append(
+            pd.Series([clf[0].__class__.__name__, args[0], args[1], args[2]], index=pd_test_scores.columns),
+            ignore_index=True)
+
         #print_score(*args)
 if 1 == 1:
     for clf in l_clf:
@@ -177,7 +180,8 @@ if 1 == 1:
         print(random_search.cv_results_)
         y_pred = random_search.predict(x_test)
         args = calc_score(y_pred, np.array(y_test))
-        pd_test_scores.append(pd.DataFrame(data=[clf[0].__class__.__name__, args[0], args[1], args[2]]))
+        #print(clf[0].__class__.__name__, args[0], args[1], args[2])
+        pd_test_scores = pd_test_scores.append(pd.Series([clf[0].__class__.__name__, args[0], args[1], args[2]], index=pd_test_scores.columns ), ignore_index=True)
         #print_score(*args)
 
 print(pd_test_scores)
