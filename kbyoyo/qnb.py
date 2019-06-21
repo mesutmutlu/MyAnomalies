@@ -23,7 +23,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import RandomizedSearchCV
 import warnings
-warnings.filterwarnings("once")
+warnings.filterwarnings("ignore")
+
+sys.stdout.buffer.write(chr(9986).encode('utf8'))
+print(pd.set_option('display.max_columns', 500))
+pd.set_option('display.width', 1000)
+
+print(pd.read_csv("val_scores.csv"))
+print(pd.read_csv("test_scores.csv"))
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
@@ -100,14 +107,15 @@ x_train, x_test, y_train, y_test = train_test_split(X_train, Y_train, random_sta
 
 assert(np.array(y_train).shape[1] == len(labels))
 
-pd_test_scores = pd.DataFrame(columns=["clf", "precision", "recall", "f1"])
+pd_test_scores = pd.DataFrame(columns=["clf","estimator", "params", "precision", "recall", "f1"])
+pd_val_scores = pd.DataFrame(columns=["clf","estimator", "params", "metric", "score"])
 
 l_ovr_clf = [
         (SGDClassifier(), {"estimator__learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
                            "estimator__eta0":sp.stats.uniform(0.001, 0.5),
                            "estimator__early_stopping":[True],
-                           "estimator__loss":["hinge","log","squared_hinge", "perceptron"],
-                           "estimator__penalty":["l2", "l1", "elasticnet"],
+                           "estimator__loss":["hinge","log", "perceptron"],
+                           "estimator__penalty":["l2"],
                            "estimator__alpha":sp.stats.uniform(0.00001, 0.001),
                            "estimator__n_jobs":[1],
                            "estimator__max_iter":sp.stats.randint(500, 2000),
@@ -125,11 +133,11 @@ l_ovr_clf = [
                             'estimator__min_split_gain': sp.stats.uniform(0.001, 0.5),
                             #'estimator__objective': 'binary',
                             "estimator__n_jobs": [1]}),
-        (LogisticRegression(), {"estimator__penalty":["l2", "l1"],
+        (LogisticRegression(), {"estimator__penalty":["l2"],
                                 "estimator__C":sp.stats.randint(1, 10),
                                 "estimator__solver": ["lbfgs", "liblinear", "sag", "saga"],
                                 "estimator__n_jobs": [1]}),
-        (LinearSVC(),{"estimator__penalty":["l2", "l1"],
+        (LinearSVC(),{"estimator__penalty":["l2"],
                       "estimator__C": sp.stats.randint(1, 10)})
         ]
 
@@ -155,50 +163,51 @@ l_clf = [
 
 
 
-if 1 == 1:
-    for clf in l_ovr_clf:
-        print(datetime.now(), clf[0].__class__.__name__, "multi-label")
-        random_search = RandomizedSearchCV(OneVsRestClassifier(clf[0]), param_distributions=clf[1], verbose=0,cv=5, n_iter=2, scoring="f1_weighted", n_jobs=3)
+for metric in ["precision_weighted", "recall_weighted", "f1_weighted", "accuracy"]:
 
-        # clf = OneVsRestClassifier(clf)
-        #         # clf.fit(x_train, np.array(y_train))
-        random_search.fit(x_train, np.array(y_train))
-        print(random_search.cv_results_)
-        y_pred = random_search.predict(x_test)
-        args = calc_score(y_pred, np.array(y_test))
-        pd_test_scores = pd_test_scores.append(
-            pd.Series([clf[0].__class__.__name__, args[0], args[1], args[2]], index=pd_test_scores.columns),
-            ignore_index=True)
+    if 1 == 1:
+        for clf in l_ovr_clf:
+            print(datetime.now(), clf[0].__class__.__name__, "multi-label")
+            random_search = RandomizedSearchCV(OneVsRestClassifier(clf[0]), param_distributions=clf[1], verbose=0,cv=5,
+                                               n_iter=2, scoring=metric, n_jobs=3)
 
+            # clf = OneVsRestClassifier(clf)
+            #         # clf.fit(x_train, np.array(y_train))
+            random_search.fit(x_train, np.array(y_train))
+            #print(random_search.cv_results_)
+            pd_val_scores = pd_val_scores.append(
+                pd.Series([clf[0].__class__.__name__, random_search.best_estimator_, random_search.best_params_,
+                           metric, random_search.best_score_], index=pd_val_scores.columns),
+                ignore_index=True)
+            y_pred = random_search.predict(x_test)
+            args = calc_score(y_pred, np.array(y_test))
+            pd_test_scores = pd_test_scores.append(
+                pd.Series([clf[0].__class__.__name__, random_search.best_estimator_, random_search.best_params_,
+                           args[0], args[1], args[2]], index=pd_test_scores.columns),
+                ignore_index=True)
+
+            #print_score(*args)
+    if 1 == 1:
+        for clf in l_clf:
+            print(datetime.now(), clf[0].__class__.__name__, "multi-label")
+            random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], verbose=0, cv=5,
+                                               n_iter=2, scoring=metric, n_jobs=3)
+            random_search.fit(x_train, np.array(y_train))
+            pd_val_scores = pd_val_scores.append(
+                pd.Series([clf[0].__class__.__name__, random_search.best_estimator_, random_search.best_params_,
+                           metric, random_search.best_score_], index=pd_val_scores.columns),
+                ignore_index=True)
+            #print(random_search.cv_results_)
+            y_pred = random_search.predict(x_test)
+            args = calc_score(y_pred, np.array(y_test))
+            #print(clf[0].__class__.__name__, args[0], args[1], args[2])
+            pd_test_scores = pd_test_scores.append(
+                pd.Series([clf[0].__class__.__name__, random_search.best_estimator_, random_search.best_params_,
+                           args[0], args[1], args[2]], index=pd_test_scores.columns),
+                ignore_index=True)
         #print_score(*args)
-if 1 == 1:
-    for clf in l_clf:
-        print(datetime.now(), clf[0].__class__.__name__, "multi-label")
-        random_search = RandomizedSearchCV(clf[0], param_distributions=clf[1], verbose=0, cv=5,
-                                           n_iter=2, scoring="f1_weighted", n_jobs=3)
-        random_search.fit(x_train, np.array(y_train))
-        print(random_search.cv_results_)
-        y_pred = random_search.predict(x_test)
-        args = calc_score(y_pred, np.array(y_test))
-        #print(clf[0].__class__.__name__, args[0], args[1], args[2])
-        pd_test_scores = pd_test_scores.append(pd.Series([clf[0].__class__.__name__, args[0], args[1], args[2]], index=pd_test_scores.columns ), ignore_index=True)
-        #print_score(*args)
 
+print(pd_val_scores)
+pd_val_scores.to_csv("val_scores.csv")
 print(pd_test_scores)
-if 1 == 0:
-    for classifier in l_clf :
-        print(datetime.now(), classifier.__class__.__name__, "single-label")
-        i = 0
-        n_labels = len(labels)
-        y_pred = np.empty((n_labels, x_test.shape[0]))
-        for category in labels:
-            #print(datetime.now(),'... Processing {}'.format(category))
-            # train the model using X_dtm & y
-            classifier.fit(x_train, np.array(y_train)[:,i])
-            # compute the testing scores
-            y_pred[i] = classifier.predict(x_test)
-            i += 1
-            #print(i, n_labels)
-            if i == n_labels:
-                args = calc_score(y_pred.T, np.array(y_test))
-                print_score(*args)
+pd_test_scores.to_csv("test_scores.csv")
